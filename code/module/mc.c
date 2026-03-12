@@ -1,3 +1,8 @@
+/*
+This module stores the implementation of the variable and functions
+contained in the mc.h header file.
+*/
+
 #include "settings.h"
 #include "mc.h"
 

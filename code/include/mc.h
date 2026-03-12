@@ -1,7 +1,13 @@
-#include "raylib.h"
+/*
+This file contains variable declarations and function prototypes for the
+mc module.
+*/
 
 #ifndef MC_H
 #define MC_H
+
+#include <stdbool.h>
+#include "raylib.h"
 
 typedef struct mc{
     Vector2 position;
