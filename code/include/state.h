@@ -26,7 +26,7 @@ typedef enum{
 } GameState;
 
 // Update the game state
-int UpdateGameState(
+int UpdateGame(
     GameState* game_state, Interactive* game_interactive, Character* player,
     Settings* game_settings, Map* game_map, GameContext* game_context,
     Audio* game_audio, Vector2 map_size

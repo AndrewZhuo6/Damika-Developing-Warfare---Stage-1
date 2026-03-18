@@ -122,7 +122,7 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         }
 
         // Update game state
-        if (UpdateGameState(
+        if (UpdateGame(
             game_state, game_interactive, player, game_settings, game_map,
             game_context, game_audio, map_size
         )){

@@ -13,8 +13,11 @@ Settings InitSettings(){
     new_settings.window_width = 1200;
     new_settings.window_height = 800;
     new_settings.fps = 60;
-    new_settings.game_volume = 50;
-    new_settings.mc_speed = 2.5f;
+    new_settings.game_volume = 50.0f;
+    new_settings.mc_speed = 150.0f;
+    new_settings.max_stamina = 100.0f;
+    new_settings.stamina_depletion_rate = 20.0f;
+    new_settings.stamina_recovery_rate = 10.0f;
     
     return new_settings;
 }

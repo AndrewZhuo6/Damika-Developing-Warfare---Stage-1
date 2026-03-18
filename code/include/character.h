@@ -35,6 +35,10 @@ typedef struct Character{
     int frame_counter;                   // Counter for the current frame
     int frame_speed;                     // Speed of the sprite animation
 
+    float stamina;                                                       // Current stamina of the character
+    float max_stamina;                                                   // Maximum stamina of the character
+    bool exhausted;                                                      // Whether the character is too tired to run
+    bool needs_shift_reset;                                              // Whether the user must release Shift before running again
     char inventory[MAX_INVENTORY_SIZE][MAX_ITEM_NAME_LENGTH];            // Inventory of the character
     int inventory_count;                                                 // Number of items in the inventory
 } Character;
