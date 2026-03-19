@@ -16,7 +16,7 @@ GameContext InitGameContext(Map* map, Character* player, Settings* settings){
     game_context.camera.offset = (Vector2){settings->window_width / 2.0f, settings->window_height / 2.0f};
     game_context.camera.target = player->position;
     game_context.camera.rotation = 0.0f;
-    game_context.camera.zoom = 1.0f;
+    game_context.camera.zoom = 0.5f;
 
     // Initialize the map.
     game_context.map = map;
@@ -40,12 +40,10 @@ void UpdateGameContext(GameContext* game_context, Settings* settings, Vector2 ma
     if (game_context->player->hallucination > game_context->player->max_hallucination * 0.9f){
         // Zoom increases from 1.0 at 90% of max hallucination
         float zoom_factor = (game_context->player->hallucination - game_context->player->max_hallucination * 0.9f) / (game_context->player->max_hallucination * 0.1f);
-        game_context->camera.zoom = 1.0f + zoom_factor * 0.5f;
+        game_context->camera.zoom += zoom_factor * 0.5f;
         
         // Cap zoom at 2.5x for playability
         if (game_context->camera.zoom > 2.5f) game_context->camera.zoom = 2.5f;
-    } else {
-        game_context->camera.zoom = 1.0f;
     }
 
     // Clamping camera target to map boundaries.

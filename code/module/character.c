@@ -29,7 +29,7 @@ Character InitCharacter(Settings *game_settings, Data *game_data){
 		game_settings->window_width / 2.0f,
 		game_settings->window_height / 2.0f
 	};
-	new_character.size = (Vector2){200.0f, 200.0f};
+	new_character.size = (Vector2){400.0f, 400.0f};
 	new_character.speed = game_settings->mc_speed;
 	new_character.direction = 0;
 
