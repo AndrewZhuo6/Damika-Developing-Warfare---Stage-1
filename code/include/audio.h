@@ -15,6 +15,7 @@ typedef struct Audio{
     Sound scream_sound;         // Scream sound
     Sound step_outdoor;         // Outdoor walking sound
     Sound step_indoor;          // Indoor walking sound
+    Sound notif_sound;          // Notification sound
 } Audio;
 
 Audio InitAudio(Settings* game_settings);              // Initializes the game's audio.
@@ -22,5 +23,6 @@ void UpdateAudio(Audio* audio);                        // Keep updating backgrou
 void CloseAudio(Audio* audio);                         // Close the audio device.
 void PlayScream(Audio* audio);                         // Play the scream sound.
 void PlayStep(Audio* audio, bool is_outdoor);          // Play the walking sound.
+void PlayNotif(Audio* audio);                          // Play the notification sound.
 
 #endif

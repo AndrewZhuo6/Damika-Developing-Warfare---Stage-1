@@ -47,7 +47,7 @@ typedef struct Character{
     int inventory_count;                                                 // Number of items in the inventory
 } Character;
 
-Character InitCharacter(Settings* game_settings, Data* game_data);                                                     // Initialize the character.
+Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map);                                                     // Initialize the character.
 void UpdateCharacter(Character* character, Settings* game_settings, Vector2 map_size, Map* map, Audio* audio, bool is_outdoor);         // Update the character.
 void CloseCharacter(Character* character);                                                                             // Close the character.
 void DrawCharacter(Character* character);                                                                              // Draw the character.

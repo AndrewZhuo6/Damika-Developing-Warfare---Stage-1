@@ -50,6 +50,13 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], int npcCount, int ite
 void InteractWithObject(Interactable* objectToInteractWith, Dialogue* game_dialogue, 
     GameState* game_state, Character *player){
     /* Handle interaction based on the type of the object. */
+    
+    // If in dialogue, advance it regardless of current collision
+    if (*game_state == DIALOGUE_CUTSCENE) {
+        InteractWithNPC(NULL, game_dialogue, game_state);
+        return;
+    }
+
     if (objectToInteractWith == NULL) return;
 
     switch (objectToInteractWith->type){

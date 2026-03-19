@@ -14,6 +14,7 @@ Made by Andrew Zhuo, Cornelius Jabez Lim, and Steven Kenneth Darwy
 #include "scene.h"
 #include "settings.h"
 #include "state.h"
+#include "phone.h"
 #include <stdio.h>
 #include "data.h"
 
@@ -42,18 +43,18 @@ int main(void){
     Data game_data = LoadData(&game_settings);
 
     // Load game resources.
-    Character player = InitCharacter(&game_settings, &game_data);
+    Map game_map = InitMap("../assets/map/MAINMAP.json");
+    Character player = InitCharacter(&game_settings, &game_data, &game_map);
     Audio game_audio = InitAudio(&game_settings);
     Scene game_scene = InitScene(&game_settings);
     Interactive game_interactive = InitInteractive(&game_settings);
     Dialogue game_dialogue = LoadDialogue("../assets/text/dialogue1.txt");
-    Map game_map = InitMap("../assets/map/MAINMAP.json");
     NPC worldNPCs[2] = {
-        {{{0}, "../assets/images/character/furina.png", {150, 200, 100, 100}, false, INTERACTABLE_TYPE_NPC}, "../assets/text/signpost.txt"},
-        {{{0}, "../assets/images/character/oldman.png", {600, 300, 80, 80}, false, INTERACTABLE_TYPE_NPC}, "../assets/text/oldman.txt"},
+        {{{0}, "../assets/images/character/furina.png", {800, 600, 200, 200}, false, INTERACTABLE_TYPE_NPC}, "../assets/text/signpost.txt"},
+        {{{0}, "../assets/images/character/oldman.png", {600, 300, 150, 150}, false, INTERACTABLE_TYPE_NPC}, "../assets/text/oldman.txt"},
     };
     Item worldItems[1] = {
-        {{{0}, "../assets/images/items/potato.png", {450, 450, 20, 20}, false, INTERACTABLE_TYPE_ITEM}, false}
+        {{{0}, "../assets/images/items/potato.png", {500, 500, 50, 50}, false, INTERACTABLE_TYPE_ITEM}, false}
     };
     GameContext game_context = InitGameContext(&game_map, &player, &game_settings);
     GameState game_state = MAINMENU;
@@ -103,8 +104,8 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         // Update audio stream.
         UpdateAudio(game_audio);
 
-        // Calculate player hitbox and map size.
-        Rectangle playerHitbox = {player->position.x + 75, player->position.y + 50, 60, 80};
+        // Calculate player hitbox for interaction (larger than physical hitbox)
+        Rectangle playerHitbox = {player->position.x + 50, player->position.y + 50, 300, 320};
         
         Vector2 map_size = {(float)game_map->tiled_map->width * game_map->tiled_map->tilewidth,
                             (float)game_map->tiled_map->height * game_map->tiled_map->tileheight};
@@ -120,6 +121,9 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         if (IsKeyPressed(KEY_ENTER)) {
             InteractWithObject(objectToInteractWith, current_dialogue, game_state, player);
         }
+
+        // Update phone
+        UpdatePhone(&game_context->phone, GetFrameTime());
 
         // Update game state
         if (UpdateGame(
@@ -161,7 +165,7 @@ void DrawGame(Scene *game_scene, Settings *game_settings,
                 0, WHITE);
             if (worldNPCs[i].base.isActive){
                 DrawText("!", worldNPCs[i].base.bounds.x + worldNPCs[i].base.bounds.width / 2,
-                    worldNPCs[i].base.bounds.y - 40, 20, RED);
+                    worldNPCs[i].base.bounds.y - 40, 50, RED);
             }
         }
         for (int i = 0; i < 1; i++){
@@ -173,7 +177,7 @@ void DrawGame(Scene *game_scene, Settings *game_settings,
                     0, WHITE);
                 if (worldItems[i].base.isActive){
                     DrawText("!", worldItems[i].base.bounds.x + 20,
-                        worldItems[i].base.bounds.y - 30, 20, RED);
+                        worldItems[i].base.bounds.y - 30, 50, RED);
                 }
             }
         }
@@ -199,6 +203,9 @@ void DrawGame(Scene *game_scene, Settings *game_settings,
             DrawText("Press ENTER to continue", GetScreenWidth() - 150,
                     GetScreenHeight() - 30, 10, GRAY);
         }
+
+        // Draw Phone
+        DrawPhone(&game_context->phone);
     }
     EndDrawing();
 }

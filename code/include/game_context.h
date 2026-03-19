@@ -10,6 +10,7 @@ Made by Andrew Zhuo.
 #include "map.h"
 #include "character.h"
 #include "settings.h"
+#include "phone.h"
 
 typedef struct{
     /* Game context */
@@ -17,6 +18,7 @@ typedef struct{
     Character* player;         // The player of the game.
     Camera2D camera;           // The camera of the game.
     bool is_outdoor;           // Whether the game is being played outdoors.
+    Phone phone;               // The phone system for messages.
 } GameContext;
 
 GameContext InitGameContext(Map* map, Character* player, Settings* settings);             // Initialize the game context.

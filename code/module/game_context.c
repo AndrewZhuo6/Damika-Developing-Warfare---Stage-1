@@ -27,6 +27,9 @@ GameContext InitGameContext(Map* map, Character* player, Settings* settings){
     // Initialize the outdoor status.
     game_context.is_outdoor = true;
 
+    // Initialize the phone system.
+    InitPhone(&game_context.phone);
+
     return game_context;
 }
 

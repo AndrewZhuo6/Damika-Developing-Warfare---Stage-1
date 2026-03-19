@@ -22,10 +22,7 @@ Data LoadData(Settings* game_settings){
 
         UnloadFileData(file_data);
     } else{
-        data.position = (Vector2){
-            (float)game_settings->window_width / 2,
-            (float)game_settings->window_height / 2
-        };
+        data.position = (Vector2){ -1.0f, -1.0f };
         data.volume = game_settings->game_volume;
     }
 
@@ -36,7 +33,9 @@ void ApplyData(Character* player, Item worldItems[], int itemCount, Settings* ga
     /* Apply the data */
 
     // Apply player state
-    player->position = data->position;
+    if (data->position.x != -1.0f && data->position.y != -1.0f) {
+        player->position = data->position;
+    }
     player->direction = data->direction;
     for (int i = 0; i < data->inventory_count; i++){
         strcpy(player->inventory[i], data->inventory[i]);

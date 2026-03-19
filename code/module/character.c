@@ -12,7 +12,7 @@ Module made by Andrew Zhuo.
 #include "map.h"
 #include "data.h"
 
-Character InitCharacter(Settings *game_settings, Data *game_data){
+Character InitCharacter(Settings *game_settings, Data *game_data, Map *game_map){
 	/* Initialize the character. */
 	Character new_character = {0};
 
@@ -25,11 +25,15 @@ Character InitCharacter(Settings *game_settings, Data *game_data){
 	new_character.sprite = new_character.sprite_idle;
 
 	// Initialize character position, size, speed, and direction
-	new_character.position = (Vector2){
-		game_settings->window_width / 2.0f,
-		game_settings->window_height / 2.0f
-	};
 	new_character.size = (Vector2){400.0f, 400.0f};
+	new_character.position = (Vector2){
+        /*
+		(game_map->tiled_map->width * game_map->tiled_map->tilewidth - new_character.size.x) / 2.0f,
+		(game_map->tiled_map->height * game_map->tiled_map->tileheight - new_character.size.y) / 2.0f
+        */
+        450.0f,
+        1200.0f
+	};
 	new_character.speed = game_settings->mc_speed;
 	new_character.direction = 0;
 
