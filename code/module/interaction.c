@@ -6,6 +6,7 @@ Module made by Andrew Zhuo and Cornelius Jabez Lim.
 
 #include "interaction.h"
 #include <string.h>
+#include "raymath.h"
 
 void LoadNPCs(NPC npcs[], int count){
     /* Load NPCs */
@@ -25,12 +26,20 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], int npcCount, int ite
     Rectangle playerHitbox, Interactable** objectToInteractWith){
     /* Check if the player is colliding with any interactable objects. */
     *objectToInteractWith = NULL;
+    float min_dist = 1e6; // Large number
+    Vector2 playerPos = {playerHitbox.x + playerHitbox.width / 2.0f, playerHitbox.y + playerHitbox.height / 2.0f};
 
     for (int i = 0; i < npcCount; i++){
         // Check collision with NPCs
         if (CheckCollisionRecs(playerHitbox, worldNPCs[i].base.bounds)){
             worldNPCs[i].base.isActive = true;
-            *objectToInteractWith = &worldNPCs[i].base;
+            Vector2 npcPos = {worldNPCs[i].base.bounds.x + worldNPCs[i].base.bounds.width / 2.0f, 
+                               worldNPCs[i].base.bounds.y + worldNPCs[i].base.bounds.height / 2.0f};
+            float dist = Vector2Distance(playerPos, npcPos);
+            if (dist < min_dist){
+                min_dist = dist;
+                *objectToInteractWith = (Interactable*)&worldNPCs[i];
+            }
         } else{
             worldNPCs[i].base.isActive = false;
         }
@@ -40,7 +49,13 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], int npcCount, int ite
         // Check collision with items
         if (!worldItems[i].picked_up && CheckCollisionRecs(playerHitbox, worldItems[i].base.bounds)){
             worldItems[i].base.isActive = true;
-            *objectToInteractWith = &worldItems[i].base;
+            Vector2 itemPos = {worldItems[i].base.bounds.x + worldItems[i].base.bounds.width / 2.0f, 
+                                worldItems[i].base.bounds.y + worldItems[i].base.bounds.height / 2.0f};
+            float dist = Vector2Distance(playerPos, itemPos);
+            if (dist < min_dist){
+                min_dist = dist;
+                *objectToInteractWith = (Interactable*)&worldItems[i];
+            }
         } else{
             worldItems[i].base.isActive = false;
         }
@@ -50,14 +65,14 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], int npcCount, int ite
 void InteractWithObject(Interactable* objectToInteractWith, Dialogue* game_dialogue, 
     GameState* game_state, Character *player){
     /* Handle interaction based on the type of the object. */
-    
-    // If in dialogue, advance it regardless of current collision
     if (*game_state == DIALOGUE_CUTSCENE) {
         InteractWithNPC(NULL, game_dialogue, game_state);
         return;
     }
 
-    if (objectToInteractWith == NULL) return;
+    if (objectToInteractWith == NULL) {
+        return;
+    }
 
     switch (objectToInteractWith->type){
         case INTERACTABLE_TYPE_NPC:

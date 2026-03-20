@@ -121,6 +121,7 @@ void HandlePhoneInput(Phone *phone){
     if (phone->state == PHONE_NOTIFICATION){
         if (IsKeyPressed(KEY_R)){
             phone->state = PHONE_OPENED;
+            return;            // Prevent closing in the same frame
         }
     } else if (phone->state == PHONE_OPENED){
         // Fixed reply with ENTER
@@ -141,8 +142,8 @@ void HandlePhoneInput(Phone *phone){
         */
     }
 
-    // Global close for any phone state
-    if (IsKeyPressed(KEY_C)){
+    // Global close for any phone state except when just opened from notification
+    if (IsKeyPressed(KEY_R)){
         phone->state = PHONE_IDLE;
     }
 }
