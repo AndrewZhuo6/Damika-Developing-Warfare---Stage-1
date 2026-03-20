@@ -17,45 +17,54 @@ Interactive InitInteractive(Settings* game_settings){
     new_interactive.settings_button = LoadTexture("../assets/images/buttons/settings.jpg");
     new_interactive.quit_button = LoadTexture("../assets/images/buttons/quit.jpg");
 
-    // Calculate play button bounds
-    new_interactive.play_bounds = (Rectangle){
-        (float)game_settings->window_width / 2.0f - (float)new_interactive.play_button.width / 2.0f,
-        (float)game_settings->window_height / 2.0f - (float)new_interactive.play_button.height / 2.0f - 2.0f * (float)new_interactive.play_button.height,
-        (float)new_interactive.play_button.width,
-        (float)new_interactive.play_button.height
-    };
-    
-    // Calculate settings button bounds
-    new_interactive.settings_bounds = (Rectangle){
-        (float)game_settings->window_width / 2.0f - (float)new_interactive.settings_button.width / 2.0f,
-        (float)game_settings->window_height / 2.0f - (float)new_interactive.settings_button.height / 2.0f,
-        (float)new_interactive.settings_button.width,
-        (float)new_interactive.settings_button.height
-    };
-    
-    // Calculate quit button bounds
-    new_interactive.quit_bounds = (Rectangle){
-        (float)game_settings->window_width / 2.0f - (float)new_interactive.quit_button.width / 2.0f,
-        (float)game_settings->window_height / 2.0f + (float)new_interactive.quit_button.height / 2.0f + (float)new_interactive.quit_button.height,
-        (float)new_interactive.quit_button.width,
-        (float)new_interactive.quit_button.height
-    };
-
     // Initialize slider dimensions.
     new_interactive.bar_width = 400.0f;
     new_interactive.bar_height = 10.0f;
     new_interactive.knob_width = 20.0f;
     new_interactive.knob_height = 30.0f;
 
-    // Slider logic
-    new_interactive.volume_slider_bar = (Rectangle){
-        (float)game_settings->window_width / 2.0f - new_interactive.bar_width / 2.0f,
-        (float)game_settings->window_height / 2.0f - new_interactive.bar_height / 2.0f,
-        new_interactive.bar_width,
-        new_interactive.bar_height
-    };
+    // Calculate initial layout
+    UpdateInteractiveLayout(&new_interactive);
     
     return new_interactive;
+}
+
+void UpdateInteractiveLayout(Interactive* interactive){
+    /* Update the layout of interactive elements based on current screen size. */
+    float screen_width = (float)GetScreenWidth();
+    float screen_height = (float)GetScreenHeight();
+
+    // Calculate play button bounds
+    interactive->play_bounds = (Rectangle){
+        screen_width / 2.0f - (float)interactive->play_button.width / 2.0f,
+        screen_height / 2.0f - (float)interactive->play_button.height / 2.0f - 2.0f * (float)interactive->play_button.height,
+        (float)interactive->play_button.width,
+        (float)interactive->play_button.height
+    };
+    
+    // Calculate settings button bounds
+    interactive->settings_bounds = (Rectangle){
+        screen_width / 2.0f - (float)interactive->settings_button.width / 2.0f,
+        screen_height / 2.0f - (float)interactive->settings_button.height / 2.0f,
+        (float)interactive->settings_button.width,
+        (float)interactive->settings_button.height
+    };
+    
+    // Calculate quit button bounds
+    interactive->quit_bounds = (Rectangle){
+        screen_width / 2.0f - (float)interactive->quit_button.width / 2.0f,
+        screen_height / 2.0f + (float)interactive->quit_button.height / 2.0f + (float)interactive->quit_button.height,
+        (float)interactive->quit_button.width,
+        (float)interactive->quit_button.height
+    };
+
+    // Slider logic
+    interactive->volume_slider_bar = (Rectangle){
+        screen_width / 2.0f - interactive->bar_width / 2.0f,
+        screen_height / 2.0f - interactive->bar_height / 2.0f,
+        interactive->bar_width,
+        interactive->bar_height
+    };
 }
 
 void UpdateInteractive(Interactive* interactive, Settings* game_settings){
@@ -108,7 +117,7 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings){
 
         // Update settings volume
         game_settings->game_volume = (new_knob_x - interactive->volume_slider_bar.x) / interactive->bar_width * 100.0f;
-        SetMasterVolume(game_settings->game_volume);
+        SetMasterVolume(game_settings->game_volume / 100.0f);
         
         // Update knob position
         interactive->volume_slider_knob.x = new_knob_x - interactive->knob_width / 2.0f;

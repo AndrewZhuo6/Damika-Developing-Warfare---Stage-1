@@ -44,6 +44,7 @@ typedef struct Interactive{
 
 Interactive InitInteractive(Settings* game_settings);                             // Initializes the interactive elements.
 void UpdateInteractive(Interactive* interactive, Settings* game_settings);        // Updates the interactive elements.
+void UpdateInteractiveLayout(Interactive* interactive);                           // Updates the layout of interactive elements.
 void CloseInteractive(Interactive* interactive);                                  // Closes the interactive elements.
 
 #endif

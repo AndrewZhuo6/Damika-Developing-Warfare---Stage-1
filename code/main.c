@@ -24,10 +24,6 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
              Dialogue *game_dialogue, Map *game_map,
              NPC worldNPCs[], Item worldItems[], GameContext *game_context,
              GameState *game_state);
-void DrawGame(Scene *game_scene, Settings *game_settings,
-              Interactive *game_interactive, Map *game_map, Character *player,
-              Dialogue *game_dialogue, GameContext *game_context,
-              GameState *game_state, NPC worldNPCs[], Item worldItems[]);
 void EndGame(Audio *game_audio, Character *player, Item worldItems[], int itemCount, Scene *game_scene,
              Interactive *game_interactive, Map *game_map,
              Settings *game_settings);
@@ -105,7 +101,7 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         UpdateAudio(game_audio);
 
         // Calculate player hitbox for interaction (larger than physical hitbox)
-        Rectangle playerHitbox = {player->position.x + 50, player->position.y + 50, 300, 320};
+        Rectangle playerHitbox = {player->position.x + 50, player->position.y, 300, 300};
         
         Vector2 map_size = {(float)game_map->tiled_map->width * game_map->tiled_map->tilewidth,
                             (float)game_map->tiled_map->height * game_map->tiled_map->tileheight};
@@ -113,12 +109,17 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         CheckInteractable(worldNPCs, worldItems, 2, 1, playerHitbox, &objectToInteractWith);
 
         // Toggle pause state
-        if (IsKeyPressed(KEY_ESCAPE)) {
+        if (IsKeyPressed(KEY_ESCAPE) && (*game_state == GAMEPLAY || *game_state == PAUSE)) {
             *game_state = (*game_state == PAUSE) ? GAMEPLAY : PAUSE;
         }
 
-        // Handle dialogue
-        if (IsKeyPressed(KEY_ENTER)) {
+        // Handle interaction
+        if (IsKeyPressed(KEY_E) && *game_state == GAMEPLAY) {
+            InteractWithObject(objectToInteractWith, current_dialogue, game_state, player);
+        }
+
+        // Handle dialogue (advance with SPACE)
+        if (IsKeyPressed(KEY_SPACE) && *game_state == DIALOGUE_CUTSCENE) {
             InteractWithObject(objectToInteractWith, current_dialogue, game_state, player);
         }
 
@@ -128,86 +129,20 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         // Update game state
         if (UpdateGame(
             game_state, game_interactive, player, game_settings, game_map,
-            game_context, game_audio, map_size
+            game_context, game_audio, map_size, game_scene
         )){
             break;
+        }
+
+        // Handle window resize
+        if (IsWindowResized()){
+            UpdateInteractiveLayout(game_interactive);
         }
 
         // Draw game assets to the screen
         DrawGame(game_scene, game_settings, game_interactive, game_map, player,
                 current_dialogue, game_context, game_state, worldNPCs, worldItems);
     }
-}
-
-void DrawGame(Scene *game_scene, Settings *game_settings, 
-              Interactive *game_interactive, Map *game_map, Character *player,
-              Dialogue *game_dialogue, GameContext *game_context,
-              GameState *game_state, NPC worldNPCs[], Item worldItems[]){
-    /* Draw the game */
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
-
-    if (*game_state == MAINMENU) {
-        DrawMainMenu(game_scene, game_interactive);
-    } else if (*game_state == SETTINGS) {
-        DrawSettings(game_scene, game_settings, game_interactive);
-    } else if (*game_state == PAUSE) {
-        DrawPauseMenu(game_scene, game_settings, game_interactive);
-    } else {
-        BeginMode2D(game_context->camera);
-        DrawMap(game_map);
-        DrawCharacter(player);
-        for (int i = 0; i < 2; i++){
-            DrawTexturePro(worldNPCs[i].base.texture,
-                (Rectangle){0, 0, (float)worldNPCs[i].base.texture.width, (float)worldNPCs[i].base.texture.height},
-                worldNPCs[i].base.bounds,
-                (Vector2){0, 0},
-                0, WHITE);
-            if (worldNPCs[i].base.isActive){
-                DrawText("!", worldNPCs[i].base.bounds.x + worldNPCs[i].base.bounds.width / 2,
-                    worldNPCs[i].base.bounds.y - 40, 50, RED);
-            }
-        }
-        for (int i = 0; i < 1; i++){
-            if (!worldItems[i].picked_up){
-                DrawTexturePro(worldItems[i].base.texture,
-                    (Rectangle){0, 0, (float)worldItems[i].base.texture.width, (float)worldItems[i].base.texture.height},
-                    worldItems[i].base.bounds,
-                    (Vector2){0, 0},
-                    0, WHITE);
-                if (worldItems[i].base.isActive){
-                    DrawText("!", worldItems[i].base.bounds.x + 20,
-                        worldItems[i].base.bounds.y - 30, 50, RED);
-                }
-            }
-        }
-        EndMode2D();
-        
-        DrawTexture(game_scene->vignette, 0, 0, WHITE);
-        
-        // Draw darkening effect based on hallucination
-        // Only start darkening after the bar is full (hallucination > max_hallucination)
-        float darkness_alpha = (player->hallucination - player->max_hallucination) * 5.0f / player->max_hallucination;
-        if (darkness_alpha > 0.0f){
-            if (darkness_alpha > 1.0f) darkness_alpha = 1.0f;
-            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, darkness_alpha));
-        }
-
-        if (*game_state == DIALOGUE_CUTSCENE){
-            DrawRectangle(0, GetScreenHeight() - 120, GetScreenWidth(), 120, Fade(BLACK, 0.8f));
-
-            const char *line =
-                game_dialogue->lines[game_dialogue->current_line];
-            DrawText(line, GetScreenWidth() / 2 - MeasureText(line, 20) / 2,
-                    GetScreenHeight() - 80, 20, WHITE);
-            DrawText("Press ENTER to continue", GetScreenWidth() - 150,
-                    GetScreenHeight() - 30, 10, GRAY);
-        }
-
-        // Draw Phone
-        DrawPhone(&game_context->phone);
-    }
-    EndDrawing();
 }
 
 void EndGame(Audio *game_audio, Character *player, Item worldItems[], int itemCount, Scene *game_scene,

@@ -5,17 +5,24 @@ Made by Steven Kenneth Darwy
 */
 
 #include "state.h"
+#include "scene.h"
 #include "phone.h"
 
 int UpdateGame(GameState* game_state, Interactive* game_interactive, 
     Character* player, Settings* game_settings, Map* game_map, 
-    GameContext* game_context, Audio* game_audio, Vector2 map_size){
+    GameContext* game_context, Audio* game_audio, Vector2 map_size, Scene* game_scene){
     /* Update the game state */
     switch(*game_state){
         case MAINMENU:
             UpdateInteractive(game_interactive, game_settings);
             if (game_interactive->is_play_clicked){
-                *game_state = GAMEPLAY;
+                *game_state = PHOTO_CUTSCENE;
+                StopMusicStream(game_audio->bg_music);
+                PlayMusicStream(game_audio->cutscene_music);
+                SetTargetFPS(30);
+                game_scene->current_cutscene_frame = 1;
+                game_scene->cutscene_timer = 0.0f;
+                LoadCutsceneFrame(game_scene, game_scene->current_cutscene_frame, game_settings);
             }
             if (game_interactive->is_settings_clicked){
                 *game_state = SETTINGS;
@@ -69,6 +76,40 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive,
             break;
         case DIALOGUE_CUTSCENE:
             HideCursor();
+            break;
+        case PHOTO_CUTSCENE:
+            HideCursor();
+            
+            // Update cutscene timer
+            game_scene->cutscene_timer += GetFrameTime();
+            
+            // Allow skipping the cutscene with double-click ENTER
+            static float last_enter_press = -1.0f;
+            if (IsKeyPressed(KEY_ENTER)) {
+                float current_time = GetTime();
+                if (last_enter_press > 0 && (current_time - last_enter_press) < 0.3f) {
+                    StopMusicStream(game_audio->cutscene_music);
+                    PlayMusicStream(game_audio->bg_music);
+                    SetTargetFPS(60);
+                    ClearCutscene(game_scene);
+                    *game_state = GAMEPLAY;
+                    last_enter_press = -1.0f; // Reset
+                    break;
+                }
+                last_enter_press = current_time;
+            }
+
+            // Load the next cutscene frame if the current frame is not the last frame
+            game_scene->current_cutscene_frame++;
+            if (game_scene->current_cutscene_frame <= 5757){
+                LoadCutsceneFrame(game_scene, game_scene->current_cutscene_frame, game_settings);
+            } else{
+                StopMusicStream(game_audio->cutscene_music);
+                PlayMusicStream(game_audio->bg_music);
+                SetTargetFPS(60);
+                ClearCutscene(game_scene);
+                *game_state = GAMEPLAY;
+            }
             break;
         default:
             break;

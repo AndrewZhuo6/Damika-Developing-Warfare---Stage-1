@@ -16,6 +16,7 @@ typedef struct Audio{
     Sound step_outdoor;         // Outdoor walking sound
     Sound step_indoor;          // Indoor walking sound
     Sound notif_sound;          // Notification sound
+    Music cutscene_music;       // Cutscene audio
 } Audio;
 
 Audio InitAudio(Settings* game_settings);              // Initializes the game's audio.
