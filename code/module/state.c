@@ -31,6 +31,18 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
 
     switch(*game_state){
         case MAINMENU:
+            // --- Main Menu Animation ---
+            SetTargetFPS(24);
+            if (game_scene->current_cutscene_frame < 1 || game_scene->current_cutscene_frame > 102) {
+                game_scene->current_cutscene_frame = 1;
+            }
+            
+            bool save_exists = FileExists("../data/data.dat");
+            LoadMenuFrame(game_scene, game_scene->current_cutscene_frame, save_exists);
+            
+            game_scene->current_cutscene_frame++;
+            if (game_scene->current_cutscene_frame > 102) game_scene->current_cutscene_frame = 1;
+
             // --- Main Menu Interaction ---
             UpdateInteractive(game_interactive, game_settings);
             
@@ -44,8 +56,8 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 PauseMusicStream(game_audio->bg_music);
                 PlayMusicStream(game_audio->cutscene_music);
                 
-                // 3. Cutscene config (30 FPS)
-                SetTargetFPS(30);
+                // 3. Cutscene config (24 FPS)
+                SetTargetFPS(24);
                 game_scene->current_cutscene_frame = 0;
                 game_scene->cutscene_timer = 0.0f;
                 
@@ -57,12 +69,12 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 
                 PauseMusicStream(game_audio->bg_music);
                 PlayMusicStream(game_audio->cutscene_music);
-                SetTargetFPS(30);
+                SetTargetFPS(24);
                 game_scene->current_cutscene_frame = 0;
                 game_scene->cutscene_timer = 0.0f;
                 
             } else if (game_interactive->is_settings_clicked){
-                game_context->previous_state = *game_state;
+                game_context->settings_previous_state = *game_state;
                 *game_state = SETTINGS;
             } else if (game_interactive->is_quit_clicked){
                 return 1;
@@ -108,12 +120,12 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 *game_state = game_context->previous_state;
                 game_interactive->is_continue_clicked = false;
             } else if (game_interactive->is_settings_clicked){
-                game_context->previous_state = *game_state;
+                game_context->settings_previous_state = *game_state;
                 *game_state = SETTINGS;
             } else if (game_interactive->is_main_menu_clicked){
                 SaveData(player, worldItems, worldItemsCount, game_settings);
                 *game_state = MAINMENU;
-                UpdateInteractiveLayout(game_interactive, MAINMENU);
+                UpdateInteractiveLayout(game_interactive, MAINMENU, game_settings);
                 game_interactive->is_main_menu_clicked = false;
             } else if (game_interactive->is_quit_clicked){
                 SaveData(player, worldItems, worldItemsCount, game_settings);
@@ -123,11 +135,20 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
             break;
 
         case SETTINGS:
+            // --- Settings Animation ---
+            if (game_scene->current_cutscene_frame < 1 || game_scene->current_cutscene_frame > 102) {
+                game_scene->current_cutscene_frame = 1;
+            }
+            LoadSettingsFrame(game_scene, game_scene->current_cutscene_frame);
+            LoadKnobFrame(game_scene, game_scene->current_cutscene_frame);
+            game_scene->current_cutscene_frame++;
+            if (game_scene->current_cutscene_frame > 102) game_scene->current_cutscene_frame = 1;
+
             // --- Settings Adjustment ---
             UpdateInteractive(game_interactive, game_settings);
-            if (IsKeyPressed(KEY_ESCAPE)){
-                *game_state = game_context->previous_state;
-                UpdateInteractiveLayout(game_interactive, *game_state);
+            if (game_interactive->is_settings_back_clicked){
+                *game_state = game_context->settings_previous_state;
+                UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
             }
             ShowCursor();
             break;
@@ -158,7 +179,7 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
             }
 
             // Frame-by-frame loading
-            if (game_scene->current_cutscene_frame < 896){
+            if (game_scene->current_cutscene_frame < 717){
                 game_scene->current_cutscene_frame++;
                 LoadCutsceneFrame(game_scene, game_scene->current_cutscene_frame, game_settings);
             } else{

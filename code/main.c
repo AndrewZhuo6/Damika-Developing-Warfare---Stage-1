@@ -113,7 +113,7 @@ int main(void){
 void InitGame(Settings *game_settings){
     // Set configuration flags for the Raylib window
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    SetTargetFPS(game_settings->fps);
+    SetTargetFPS(24);
     
     // Create the game window with initial dimensions
     InitWindow(game_settings->window_width, game_settings->window_height, "Aisling");
@@ -167,7 +167,7 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
                 }
                 game_context->previous_state = *game_state;
                 *game_state = PAUSE;
-                UpdateInteractiveLayout(game_interactive, PAUSE);
+                UpdateInteractiveLayout(game_interactive, PAUSE, game_settings);
             }
         }
 
@@ -195,7 +195,7 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
 
         // Responsive UI: update layout on window resize
         if (IsWindowResized()){
-            UpdateInteractiveLayout(game_interactive, *game_state);
+            UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
         }
 
         // Rendering phase: draw current scene based on state

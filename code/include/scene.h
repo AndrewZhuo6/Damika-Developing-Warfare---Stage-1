@@ -24,9 +24,9 @@
 typedef struct Scene {
     Texture2D mainmenu_background;                  // Visual for the start screen
     Texture2D pause_menu_background;                // Dimmed background for pause
-    Texture2D settings_background;                  // Background for configuration menu
     Texture2D vignette;                             // Horror-theming overlay effect
     Texture2D current_cutscene_frame_texture;       // Single frame currently being shown in a cutscene
+    Texture2D current_knob_frame_texture;           // Single frame for the volume slider knob
     float cutscene_timer;                           // Progress tracker for cutscene timing
     int current_cutscene_frame;                     // Index of the active cutscene image
 } Scene;
@@ -54,6 +54,9 @@ void DrawGame(
  * This is used for high-frame-count cutscenes to save memory.
  */
 void LoadCutsceneFrame(Scene *scene, int frame_index, Settings *game_settings);
+void LoadMenuFrame(Scene *scene, int frame_index, bool is_save_available);
+void LoadSettingsFrame(Scene *scene, int frame_index);
+void LoadKnobFrame(Scene *scene, int frame_index);
 
 /** @brief Draws the main menu UI and background. */
 void DrawMainMenu(Scene* scene, Interactive* game_interactive);
