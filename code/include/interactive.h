@@ -49,11 +49,14 @@ typedef struct Interactive {
     // --- Volume Slider ---
     Rectangle volume_slider_bar;   // Visual bar of the slider
     Rectangle volume_slider_knob;  // Draggable handle of the slider
+    Rectangle settings_back_bounds; // Hitbox for 'Back' button in settings
     float bar_width;               
     float bar_height;              
     float knob_width;              
     float knob_height;             
     bool is_volume_moving;         // True if user is currently dragging the knob
+    bool is_settings_back_clicked; // True if back was clicked
+    bool is_settings_back_hovered; // True if back is hovered
 } Interactive;
 
 /**
@@ -75,7 +78,7 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings);
  * @param interactive Pointer to the UI container.
  * @param game_state Current state to determine which buttons to show.
  */
-void UpdateInteractiveLayout(Interactive* interactive, int game_state);
+void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings* game_settings);
 
 /**
  * @brief Unloads UI textures and frees resources.

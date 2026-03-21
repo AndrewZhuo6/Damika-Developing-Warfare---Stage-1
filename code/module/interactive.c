@@ -26,13 +26,13 @@ Interactive InitInteractive(Settings* game_settings){
     new_interactive.quit_button = LoadTexture("../assets/images/buttons/quit.png");
 
     // 2. Geometry Setup (Constants)
-    new_interactive.bar_width = 400.0f;
-    new_interactive.bar_height = 10.0f;
-    new_interactive.knob_width = 20.0f;
-    new_interactive.knob_height = 30.0f;
+    new_interactive.bar_width = 770.0f;
+    new_interactive.bar_height = 5.0f;
+    new_interactive.knob_width = 100.0f;
+    new_interactive.knob_height = 120.0f;
 
     // 3. Initial Layout pass
-    UpdateInteractiveLayout(&new_interactive, MAINMENU);
+    UpdateInteractiveLayout(&new_interactive, MAINMENU, game_settings);
     
     return new_interactive;
 }
@@ -43,32 +43,116 @@ Interactive InitInteractive(Settings* game_settings){
  * Positions buttons in a vertical stack in the center of the screen.
  * Differing logic for MAINMENU vs PAUSE to prioritize specific buttons.
  */
-void UpdateInteractiveLayout(Interactive* interactive, int game_state){
+void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings* game_settings){
     float screen_width = (float)GetScreenWidth();
     float screen_height = (float)GetScreenHeight();
-    float button_spacing = 20.0f;
-    float slot_h = (float)interactive->new_game_button.height;
     
-    // Calculate total height of the button stack to center it vertically
+    // 1. Calculate scale factors relative to the original reference resolution (1200x800)
+    const float ref_w = (float)game_settings->window_width;
+    const float ref_h = (float)game_settings->window_height;
+    float scale_x = screen_width / ref_w;
+    float scale_y = screen_height / ref_h;
+
+    // 2. Scale the base layout units
+    float slot_h = (float)interactive->new_game_button.height * scale_y;
+    float button_spacing = 20.0f * scale_y;
+    
+    // 3. Calculate start_y using the scaled height for centering
     float total_h = 4 * slot_h + 3 * button_spacing;
-    float start_y = screen_height / 2.0f - total_h / 2.0f;
+    float start_y = (screen_height / 2.0f) - (total_h / 2.0f);
 
     if (game_state == MAINMENU){
-        // Order: New Game -> Continue -> Settings -> Quit
-        interactive->new_game_bounds = (Rectangle){ screen_width / 2.0f - (float)interactive->new_game_button.width / 2.0f, start_y, (float)interactive->new_game_button.width, slot_h };
-        interactive->continue_bounds = (Rectangle){ screen_width / 2.0f - (float)interactive->continue_button.width / 2.0f, start_y + 1 * (slot_h + button_spacing), (float)interactive->continue_button.width, slot_h };
-        interactive->settings_bounds = (Rectangle){ screen_width / 2.0f - (float)interactive->settings_button.width / 2.0f, start_y + 2 * (slot_h + button_spacing), (float)interactive->settings_button.width, slot_h };
-        interactive->quit_bounds     = (Rectangle){ screen_width / 2.0f - (float)interactive->quit_button.width / 2.0f, start_y + 3 * (slot_h + button_spacing), (float)interactive->quit_button.width, slot_h };
+        // Original manual adjustments were made on 1200x800
+        // We use scale_x and scale_y to keep these adjustments proportional
+
+        if (FileExists("../data/data.dat")){
+            interactive->continue_bounds = (Rectangle){
+                screen_width / 2.0f - (float)interactive->new_game_button.width * 1.9f * scale_x, 
+                start_y + (float)interactive->new_game_button.height * 0.6f * scale_y, 
+                (float)interactive->new_game_button.width * 1.9f * scale_x, 
+                slot_h * 2.0f 
+            };
+            interactive->new_game_bounds = (Rectangle){
+                screen_width / 2.0f + (float)interactive->continue_button.width * 0.15f * scale_x, 
+                start_y + (float)interactive->continue_button.height * 0.6f * scale_y, 
+                (float)interactive->continue_button.width * 1.9f * scale_x, 
+                slot_h * 2.0f
+            };
+        } else{
+            interactive->new_game_bounds = (Rectangle){
+                screen_width / 2.0f - (float)interactive->new_game_button.width * 0.95f * scale_x, 
+                start_y + (float)interactive->new_game_button.height * 0.6f * scale_y, 
+                (float)interactive->new_game_button.width * 1.9f * scale_x, 
+                slot_h * 2.0f
+            };
+        }
+        interactive->settings_bounds = (Rectangle){
+            screen_width / 2.0f - (float)interactive->settings_button.width * 0.95f * scale_x, 
+            start_y + 2.6f * (slot_h + button_spacing), 
+            (float)interactive->settings_button.width * 1.9f * scale_x, 
+            slot_h * 2.0f
+        };
+        interactive->quit_bounds = (Rectangle){
+            screen_width / 2.0f - (float)interactive->quit_button.width * 0.95f * scale_x, 
+            start_y + 4.7f * (slot_h + button_spacing), 
+            (float)interactive->quit_button.width * 1.9f * scale_x, 
+            slot_h * 2.0f
+        };
     } else if (game_state == PAUSE){
-        // Order: Continue -> Settings -> Main Menu -> Quit
-        interactive->continue_bounds  = (Rectangle){ screen_width / 2.0f - (float)interactive->continue_button.width / 2.0f, start_y, (float)interactive->continue_button.width, slot_h };
-        interactive->settings_bounds  = (Rectangle){ screen_width / 2.0f - (float)interactive->settings_button.width / 2.0f, start_y + 1 * (slot_h + button_spacing), (float)interactive->settings_button.width, slot_h };
-        interactive->main_menu_bounds = (Rectangle){ screen_width / 2.0f - (float)interactive->main_menu_button.width / 2.0f, start_y + 2 * (slot_h + button_spacing), (float)interactive->main_menu_button.width, slot_h };
-        interactive->quit_bounds      = (Rectangle){ screen_width / 2.0f - (float)interactive->quit_button.width / 2.0f, start_y + 3 * (slot_h + button_spacing), (float)interactive->quit_button.width, slot_h };
+        // Scale standard pause menu buttons to maintain original proportions
+        float pause_btn_w = (float)interactive->continue_button.width * scale_x;
+        float pause_btn_h = slot_h;
+
+        interactive->continue_bounds = (Rectangle){
+            screen_width / 2.0f - pause_btn_w / 2.0f, 
+            start_y, 
+            pause_btn_w, 
+            pause_btn_h 
+        };
+        interactive->settings_bounds = (Rectangle){
+            screen_width / 2.0f - (float)interactive->settings_button.width * scale_x / 2.0f, 
+            start_y + 1 * (slot_h + button_spacing), 
+            (float)interactive->settings_button.width * scale_x, 
+            slot_h 
+        };
+        interactive->main_menu_bounds = (Rectangle){
+            screen_width / 2.0f - (float)interactive->main_menu_button.width * scale_x / 2.0f, 
+            start_y + 2 * (slot_h + button_spacing), 
+            (float)interactive->main_menu_button.width * scale_x, 
+            slot_h 
+        };
+        interactive->quit_bounds = (Rectangle){
+            screen_width / 2.0f - (float)interactive->quit_button.width * scale_x / 2.0f, 
+            start_y + 3 * (slot_h + button_spacing), 
+            (float)interactive->quit_button.width * scale_x, 
+            slot_h 
+        };
     }
 
-    // Volume Slider placement (always centered)
-    interactive->volume_slider_bar = (Rectangle){ screen_width / 2.0f - interactive->bar_width / 2.0f, screen_height / 2.0f - interactive->bar_height / 2.0f, interactive->bar_width, interactive->bar_height };
+    // Volume slider placement (scaled from 1200x800 reference)
+    // Using reference values: bar(770x5), knob(100x120), back_btn(460x115)
+    float bar_w = interactive->bar_width * scale_x;
+    float bar_h = interactive->bar_height * scale_y;
+    interactive->volume_slider_bar = (Rectangle){ 
+        screen_width / 2.0f - bar_w / 2.0f, 
+        screen_height / 2.0f + bar_h * 14.0f, 
+        bar_w, 
+        bar_h 
+    };
+
+    // Reference Knob dimensions (100x120)
+    interactive->knob_width = interactive->knob_width * scale_x;
+    interactive->knob_height = interactive->knob_height * scale_y;
+
+    // Settings Back Button (460x115 reference)
+    float btn_w = 460.0f * scale_x;
+    float btn_h = 115.0f * scale_y;
+    interactive->settings_back_bounds = (Rectangle){
+        screen_width / 2.0f - btn_w / 2.0f,
+        screen_height / 2.0f + btn_h * 1.75f,
+        btn_w,
+        btn_h
+    };
 }
 
 /**
@@ -86,6 +170,7 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings){
     interactive->is_main_menu_clicked = false;
     interactive->is_settings_clicked = false;
     interactive->is_quit_clicked = false;
+    interactive->is_settings_back_clicked = false;
 
     // --- Phase 1: Button Interaction ---
     interactive->is_new_game_hovered = CheckCollisionPointRec(mouse_position, interactive->new_game_bounds);
@@ -93,21 +178,24 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings){
     interactive->is_main_menu_hovered = CheckCollisionPointRec(mouse_position, interactive->main_menu_bounds);
     interactive->is_settings_hovered = CheckCollisionPointRec(mouse_position, interactive->settings_bounds);
     interactive->is_quit_hovered = CheckCollisionPointRec(mouse_position, interactive->quit_bounds);
+    interactive->is_settings_back_hovered = CheckCollisionPointRec(mouse_position, interactive->settings_back_bounds);
 
     if (interactive->is_new_game_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_new_game_clicked = true;
     if (interactive->is_continue_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_continue_clicked = true;
     if (interactive->is_main_menu_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_main_menu_clicked = true;
     if (interactive->is_settings_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_settings_clicked = true;
     if (interactive->is_quit_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_quit_clicked = true;
+    if (interactive->is_settings_back_hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) interactive->is_settings_back_clicked = true;
 
     // --- Phase 2: Slider Interaction ---
     // 1. Calculate knob position based on current settings (percentage mapped to width)
-    float knob_x = interactive->volume_slider_bar.x + (game_settings->game_volume * interactive->bar_width / 100.0f);
+    float knob_x = interactive->volume_slider_bar.x + (game_settings->game_volume * interactive->volume_slider_bar.width / 100.0f);
     
     interactive->volume_slider_knob = (Rectangle){
         knob_x - interactive->knob_width / 2.0f,
-        interactive->volume_slider_bar.y + interactive->bar_height / 2.0f - interactive->knob_height / 2.0f,
-        interactive->knob_width, interactive->knob_height
+        interactive->volume_slider_bar.y + interactive->volume_slider_bar.height / 2.0f - interactive->knob_height / 2.0f,
+        interactive->knob_width,
+        interactive->knob_height
     };
 
     // 2. State transition: Drag Start
@@ -121,10 +209,10 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings){
     // 4. Transform Logic: Dragging
     if (interactive->is_volume_moving){
         float new_knob_x = mouse_position.x;
-        new_knob_x = Clamp(new_knob_x, interactive->volume_slider_bar.x, interactive->volume_slider_bar.x + interactive->bar_width);
+        new_knob_x = Clamp(new_knob_x, interactive->volume_slider_bar.x, interactive->volume_slider_bar.x + interactive->volume_slider_bar.width);
 
         // Map x-position back to 0-100 range
-        game_settings->game_volume = (new_knob_x - interactive->volume_slider_bar.x) / interactive->bar_width * 100.0f;
+        game_settings->game_volume = (new_knob_x - interactive->volume_slider_bar.x) / interactive->volume_slider_bar.width * 100.0f;
         
         // Immediate Feedback: update Raylib master volume
         SetMasterVolume(game_settings->game_volume / 100.0f);
