@@ -93,9 +93,9 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 if (player->position.x == 200) PlayScream(game_audio);
 
                 // Trigger phone notification when passing x = 900
-                if ((int)player->position.x >= 900 && game_context->phone.state == PHONE_IDLE){
+                if ((int)player->position.x >= 900 && !game_context->phone.already_triggered){
                     PlayNotif(game_audio);
-                    TriggerPhoneNotification(&game_context->phone, "You have new message", "Help me!", "I'm busy");
+                    TriggerPhoneNotification(&game_context->phone, "You shouldn't be here.\nWhy are you here?", "Who are you?", "???");
                 }
             }
 

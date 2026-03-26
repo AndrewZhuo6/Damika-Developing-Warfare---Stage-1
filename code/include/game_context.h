@@ -23,13 +23,13 @@
  * components like the phone.
  */
 typedef struct GameContext {
-    Map* map;                  // Reference to the active Tiled world
-    Character* player;         // Reference to the player character state
-    Camera2D camera;           // 2D camera viewport config
-    bool is_outdoor;           // Environment flag for hallucination effects
-    Phone phone;               // Mobile phone notification sub-system
-    int previous_state;        // State cache for returning from Pause/Settings
-    int settings_previous_state; // State cache explicitly for returning from Settings
+    Map* map;                         // Reference to the active Tiled world
+    Character* player;                // Reference to the player character state
+    Camera2D camera;                  // 2D camera viewport config
+    bool is_outdoor;                  // Environment flag for hallucination effects
+    Phone phone;                      // Mobile phone notification sub-system
+    int previous_state;               // State cache for returning from Pause/Settings
+    int settings_previous_state;      // State cache explicitly for returning from Settings
 } GameContext;
 
 /** @brief Allocates and connects core systems into the context. */
