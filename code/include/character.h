@@ -62,6 +62,7 @@ typedef struct Character {
 
 /**
  * @brief Initializes character state and loads textures.
+ *
  * @param game_settings Pointer to settings for initial spawn and speed.
  * @param game_data Pointer to loaded progress to restore state.
  * @param game_map Pointer to map for initial positioning.
@@ -71,24 +72,27 @@ Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map)
 
 /**
  * @brief Updates movement, animation, and stamina based on input.
+ *
  * @param character Pointer to the player character.
  * @param game_settings Pointer to game settings.
  * @param map_size Total dimensions of the world for clamping.
  * @param map Pointer to map for collision detection.
  * @param audio Pointer to audio system for footstep sounds.
  * @param location Current character location for footstep sounds.
- * @param quest_system Pointer to the quest system for tutorial progress.
+ * @param story Pointer to the story system for tutorial progress.
  */
 void UpdateCharacter(Character* character, Settings* game_settings, Vector2 map_size, Map* map, Audio* audio, Location location, StorySystem* story);
 
 /**
  * @brief Unloads all character textures and frees resources.
+ *
  * @param character Pointer to the character to clean up.
  */
 void CloseCharacter(Character* character);
 
 /**
  * @brief Draws the character at their current position/frame.
+ *
  * @param character Pointer to the character to draw.
  */
 void DrawCharacter(Character* character);

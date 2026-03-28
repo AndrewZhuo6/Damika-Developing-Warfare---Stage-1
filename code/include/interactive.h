@@ -61,6 +61,7 @@ typedef struct Interactive {
 
 /**
  * @brief Loads UI textures and initializes default button positions.
+ *
  * @param game_settings Pointer to settings for initial layout.
  * @return An initialized Interactive structure.
  */
@@ -68,6 +69,7 @@ Interactive InitInteractive(Settings* game_settings);
 
 /**
  * @brief Updates hover and click states based on mouse position/input.
+ *
  * @param interactive Pointer to the UI container.
  * @param game_settings Pointer to settings.
  */
@@ -75,13 +77,16 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings);
 
 /**
  * @brief Adjusts UI layout based on current game state (e.g., resizing window).
+ *
  * @param interactive Pointer to the UI container.
  * @param game_state Current state to determine which buttons to show.
+ * @param game_settings Pointer to settings.
  */
 void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings* game_settings);
 
 /**
  * @brief Unloads UI textures and frees resources.
+ *
  * @param interactive Pointer to the UI container to clean up.
  */
 void CloseInteractive(Interactive* interactive);

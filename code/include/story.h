@@ -1,3 +1,12 @@
+/**
+ * @file story.h
+ * @brief Defines the data structures for story sets and phases.
+ * 
+ * This file is included by other modules that need to use the story system.
+ * 
+ * Authors: Andrew Zhuo
+ */
+
 #ifndef STORY_H
 #define STORY_H
 

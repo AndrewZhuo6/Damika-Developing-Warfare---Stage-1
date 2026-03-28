@@ -64,10 +64,15 @@ int main(void){
 }
 
 void InitGame(Settings *game_settings){
+    // Set log level to warning
     SetTraceLogLevel(LOG_WARNING);
+    // Set window configuration
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
+    // Set target FPS
     SetTargetFPS(game_settings->fps);
+    // Initialize window
     InitWindow(game_settings->window_width, game_settings->window_height, "Aisling");
+    // Load icon
     Image icon = LoadImage("../assets/images/icon/app_icon.png");
     SetWindowIcon(icon);
     UnloadImage(icon);
@@ -104,13 +109,16 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
             InteractWithNPC(NULL, current_dialogue, game_state, game_context);
         }
 
+        // Update phone
         UpdatePhone(&game_context->phone, GetFrameTime());
 
+        // Update game
         if (UpdateGame(
             game_state, game_interactive, player, game_settings, game_map,
             game_context, game_audio, map_size, game_scene
         )) break;
 
+        // Draw game
         DrawGame(game_scene, game_settings, game_interactive, game_map, player,
                  game_dialogue, game_context, game_state, game_context->worldNPCs, game_context->worldItems);
     }
@@ -119,10 +127,16 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
 void EndGame(Audio *game_audio, Character *player, Scene *game_scene,
              Interactive *game_interactive, Map *game_map,
              Settings *game_settings, GameContext *game_context){
+    // Save data
+    SaveData(game_context, game_settings);
+    // Close audio
     CloseAudio(game_audio);
+    // Close character
     CloseCharacter(player);
+    // Close scene
     CloseScene(game_scene);
-    CloseInteractive(game_interactive);
+    // Close map
     FreeMap(game_map);
+    // Close window
     CloseWindow();
 }

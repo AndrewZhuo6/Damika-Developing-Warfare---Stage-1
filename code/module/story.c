@@ -5,7 +5,11 @@
 #include "ctype.h"
 #include "game_context.h"
 #include "assets.h"
+#include "data.h"
 
+/**
+ * @brief Trims leading and trailing whitespace from a string.
+ */
 static char* trim(char* str){
     // Remove leading and trailing whitespace from a string
     char* end;
@@ -38,6 +42,7 @@ void LoadStoryDay(StorySystem* story, const char* path) {
     int current_phase = -1;
     int line_num = 0;
 
+    // Load story day
     while (fgets(raw_line, sizeof(raw_line), file)){
         line_num++;
         char* line = trim(raw_line);
@@ -47,6 +52,7 @@ void LoadStoryDay(StorySystem* story, const char* path) {
         if (strstr(line, "SET") && strstr(line, "PHASE")){
             int set_num = 0;
             if (sscanf(line, "SET%d", &set_num) == 1){
+                // Update current set and phase
                 if (set_num - 1 > current_set){
                     current_set = set_num - 1;
                     current_phase = 0;
@@ -66,6 +72,7 @@ void LoadStoryDay(StorySystem* story, const char* path) {
             continue;
         }
 
+        // Skip if current set or phase is invalid
         if (current_set < 0 || current_phase < 0 || 
             current_set >= MAX_SETS_PER_DAY || current_phase >= MAX_PHASES_PER_SET){
             continue;
@@ -73,7 +80,7 @@ void LoadStoryDay(StorySystem* story, const char* path) {
 
         StoryPhase* phase = &story->sets[current_set].phases[current_phase];
 
-        // Known Tags
+        // Parse story day for the location, interactable type, and end condition
         if (strstr(line, "[LOCATION]")){
             if (strstr(line, "APARTMENT")) phase->location = STORY_LOC_APARTMENT;
             else if (strstr(line, "INTERIOR")) phase->location = STORY_LOC_INTERIOR;
@@ -131,16 +138,17 @@ void LoadStoryDay(StorySystem* story, const char* path) {
     story->phase_timer = 0;
 }
 
-void UpdateStory(struct GameContext* game_context, float delta) {
+void UpdateStory(struct GameContext* game_context, float delta){
     StorySystem* story = &game_context->story;
     StoryPhase* active = GetActivePhase(story);
     if (!active) return;
 
-    switch (active->end_condition.type) {
-        case CONDITION_ALL_QUESTS_COMPLETE: {
+    // Update story based on the end condition
+    switch (active->end_condition.type){
+        case CONDITION_ALL_QUESTS_COMPLETE:{
             bool all_done = true;
-            for (int i = 0; i < active->quest_count; i++) {
-                if (!active->quests[i].completed) {
+            for (int i = 0; i < active->quest_count; i++){
+                if (!active->quests[i].completed){
                     all_done = false;
                     break;
                 }
@@ -161,19 +169,20 @@ void UpdateStory(struct GameContext* game_context, float delta) {
     }
 }
 
-void AdvanceStory(struct GameContext* game_context) {
+void AdvanceStory(struct GameContext* game_context){
     StorySystem* story = &game_context->story;
-    TraceLog(LOG_INFO, "ADVANCING STORY from S%d P%d", story->current_set_idx, story->current_phase_idx);
     if (story->current_set_idx < 0 || story->current_set_idx >= MAX_SETS_PER_DAY) return;
     
     StoryPhase* old = GetActivePhase(story);
     story->current_phase_idx++;
     story->phase_timer = 0;
 
+    // If we've reached the end of the current set, move to the next set
     if (story->current_phase_idx >= story->sets[story->current_set_idx].phase_count){
         story->current_phase_idx = 0;
         story->current_set_idx++;
         
+        // If we've reached the end of the day, move to the next day
         if (story->current_set_idx >= story->set_count){
             story->current_set_idx = story->set_count - 1;
             story->current_phase_idx = story->sets[story->current_set_idx].phase_count - 1;
@@ -184,9 +193,12 @@ void AdvanceStory(struct GameContext* game_context) {
     if (next) {
         LoadPhaseAssets(next, game_context);
     }
+
+    SaveData(game_context, NULL);
 }
 
-StoryPhase* GetActivePhase(StorySystem* story) {
+StoryPhase* GetActivePhase(StorySystem* story){
+    // Return the active phase
     if (story->current_set_idx < 0 || story->current_set_idx >= MAX_SETS_PER_DAY) return NULL;
     if (story->current_phase_idx < 0 || story->current_phase_idx >= MAX_PHASES_PER_SET) return NULL;
     return &story->sets[story->current_set_idx].phases[story->current_phase_idx];

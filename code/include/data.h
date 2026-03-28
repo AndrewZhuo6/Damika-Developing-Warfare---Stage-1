@@ -28,10 +28,22 @@ typedef struct Data {
     char inventory[MAX_INVENTORY_SIZE][MAX_ITEM_NAME_LENGTH];        // List of item names in inventory
     int item_count[MAX_INVENTORY_SIZE];                              // Quantities for each inventory item
     int inventory_count;                                             // Total number of unique items
-    float player_sanity_level;                                       // Current hallucination intensity
+    float sanity;                                                    // Current hallucination intensity
+
+    // --- Story State ---
+    char day_folder[32];                                             // e.g. "day1"
+    int set_idx;                                                     // current set index
+    int phase_idx;                                                   // current phase index
+    int location;                                                    // current location index
+
+    // --- NPC Karma ---
+    int npc_karma[64];                                               // Persistent karma for all assets
+
+    // --- Quest Status ---
+    bool quest_completion[10];                                       // Completion flags for active phase quests
 
     // --- World State ---
-    bool picked_up_items[1];                                         // Tracking which items have been removed from the world
+    bool picked_up_items[100];                                       // Tracking which items have been removed from the world
 
     // --- Settings ---
     float volume;                                                    // User-defined audio volume
@@ -39,6 +51,7 @@ typedef struct Data {
 
 /**
  * @brief Reads game state from a save file on disk.
+ *
  * @param game_settings Pointer to settings (used for file paths).
  * @return A Data struct populated with saved information.
  */
@@ -46,38 +59,36 @@ Data LoadData(Settings* game_settings);
 
 /**
  * @brief Applies a Data structure's values to the active game entities.
- * @param player Pointer to the player to update.
- * @param worldItems Array of items to sync.
- * @param itemCount Number of items in the array.
+ *
+ * @param context Pointer to the game context to update.
  * @param game_settings Pointer to settings.
  * @param data Pointer to the source data to apply.
  */
-void ApplyData(Character* player, Item worldItems[], int itemCount, Settings* game_settings, Data* data);
+void ApplyData(struct GameContext* context, Settings* game_settings, Data* data);
 
 /**
  * @brief Writes current game state to a save file on disk.
- * @param player Pointer to the player character.
- * @param worldItems Array of currently tracked items.
- * @param itemCount Number of items in the array.
+ *
+ * @param context Pointer to the game context.
  * @param game_settings Pointer to settings.
  */
-void SaveData(Character* player, Item worldItems[], int itemCount, Settings* game_settings);
+void SaveData(struct GameContext* context, Settings* game_settings);
 
 /**
  * @brief Clears all player and item state to default values (New Game).
- * @param player Pointer to the player character.
- * @param worldItems Array of world items.
- * @param itemCount Number of items in the array.
+ *
+ * @param context Pointer to the game context.
+ * @param default_spawn The default spawn position.
  */
-void ResetGameData(Character* player, Item worldItems[], int itemCount, Vector2 default_spawn);
+void ResetGameData(struct GameContext* context, Vector2 default_spawn);
 
 /**
  * @brief High-level wrapper to load data and immediately apply it to the game.
- * @param player Pointer to the player.
- * @param worldItems Array of world items.
- * @param itemCount Number of items.
+ *
+ * @param context Pointer to the game context.
+ * @param game_map Pointer to the map.
  * @param game_settings Pointer to settings.
  */
-void HandleGameData(Character* player, Item worldItems[], int itemCount, Settings* game_settings, Map* game_map);
+void HandleGameData(struct GameContext* context, Map* game_map, Settings* game_settings);
 
 #endif

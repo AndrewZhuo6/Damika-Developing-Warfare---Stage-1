@@ -30,6 +30,7 @@ typedef struct Settings {
 
 /**
  * @brief Loads default settings (or potentially from a config file).
+ *
  * @return A Settings structure populated with default values.
  */
 Settings InitSettings();

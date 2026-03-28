@@ -29,6 +29,7 @@ typedef struct Audio {
 
 /**
  * @brief Initializes the audio device and loads all sound assets.
+ *
  * @param game_settings Pointer to settings containing volume and paths.
  * @return An initialized Audio structure with loaded assets.
  */
@@ -36,25 +37,28 @@ Audio InitAudio(Settings* game_settings);
 
 /**
  * @brief Updates music stream buffers to keep them playing smoothly.
- * Should be called once per frame in the main game loop.
+ *
  * @param audio Pointer to the audio container.
  */
 void UpdateAudio(Audio* audio);
 
 /**
  * @brief Unloads all audio assets and closes the audio device.
+ *
  * @param audio Pointer to the audio container to clean up.
  */
 void CloseAudio(Audio* audio);
 
 /**
  * @brief Plays the scream sound effect immediately.
+ *
  * @param audio Pointer to the audio container.
  */
 void PlayScream(Audio* audio);
 
 /**
  * @brief Plays a footstep sound based on the player's environment.
+ *
  * @param audio Pointer to the audio container.
  * @param location Current character location.
  */
@@ -62,6 +66,7 @@ void PlayStep(Audio* audio, Location location);
 
 /**
  * @brief Plays the notification sound effect.
+ *
  * @param audio Pointer to the audio container.
  */
 void PlayNotif(Audio* audio);

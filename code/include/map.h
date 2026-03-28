@@ -15,6 +15,9 @@
 
 #define MAX_TILESETS 64
 
+/**
+ * @brief Enum for different locations in the game.
+ */
 typedef enum {
     APARTMENT,
     EXTERIOR,
@@ -35,19 +38,44 @@ typedef struct Map{
     Vector2 spawn_position;                   // Spawn position for the player
 } Map;
 
-/** @brief Loads Tiled map and tileset images. */
+/**
+ * @brief Loads Tiled map and tileset images.
+ *
+ * @param path Path to the Tiled map file.
+ * @return Initialized Map struct.
+ */
 Map InitMap(const char* path);
 
-/** @brief Renders the map layers using Raylib textures. */
+/**
+ * @brief Renders the map layers using Raylib textures.
+ *
+ * @param map Pointer to the Map struct.
+ */
 void DrawMap(Map* map);
 
-/** @brief Deallocates map textures and Tiled memory. */
+/**
+ * @brief Deallocates map textures and Tiled memory.
+ *
+ * @param map Pointer to the Map struct to clean up.
+ */
 void FreeMap(Map* map);
 
-/** @brief Performs AABB collision check against map objects. */
+/**
+ * @brief Performs AABB collision check against map objects.
+ *
+ * @param map Pointer to the Map struct.
+ * @param rect Rectangle to check for collision.
+ * @return True if collision occurs, false otherwise.
+ */
 bool CheckMapCollision(Map* map, Rectangle rect);
 
-/** @brief Retrieves the visual bounds of a named object from Tiled Object Layers. */
+/**
+ * @brief Retrieves the visual bounds of a named object from Tiled Object Layers.
+ *
+ * @param map Pointer to the Map struct.
+ * @param name Name of the object to retrieve.
+ * @return Rectangle containing the bounds of the object.
+ */
 Rectangle GetMapObjectBounds(Map* map, const char* name);
 
 #endif

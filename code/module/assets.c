@@ -1,3 +1,10 @@
+/**
+ * @file assets.c
+ * @brief Implementation of the assets loading and management system.
+ *
+ * Author: Andrew Zhuo
+ */
+
 #include "assets.h"
 #include "interaction.h"
 #include <stdlib.h>
@@ -40,14 +47,16 @@ static AssetMetadata ASSET_REGISTRY[] = {
 
 static int REGISTRY_COUNT = sizeof(ASSET_REGISTRY) / sizeof(ASSET_REGISTRY[0]);
 
-static AssetMetadata* FindInRegistry(const char* id) {
+static AssetMetadata* FindInRegistry(const char* id){
+    // Find the asset in the registry
     for (int i = 0; i < REGISTRY_COUNT; i++) {
         if (strcmp(ASSET_REGISTRY[i].id, id) == 0) return &ASSET_REGISTRY[i];
     }
     return NULL;
 }
 
-void UpdateAssetKarma(const char* id, int delta) {
+void UpdateAssetKarma(const char* id, int delta){
+    // Update the karma of the asset
     AssetMetadata* meta = FindInRegistry(id);
     if (meta) {
         meta->karma += delta;
@@ -56,11 +65,28 @@ void UpdateAssetKarma(const char* id, int delta) {
     }
 }
 
-void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
-    if (!phase || !context) return;
+int GetRegistryKarma(int* dest, int max_size){
+    // Get the karma of the asset
+    int count = (REGISTRY_COUNT < max_size) ? REGISTRY_COUNT : max_size;
+    for (int i = 0; i < count; i++) {
+        dest[i] = ASSET_REGISTRY[i].karma;
+    }
+    return count;
+}
+
+void SetRegistryKarma(int* src, int count){
+    // Set the karma of the asset
+    int limit = (REGISTRY_COUNT < count) ? REGISTRY_COUNT : count;
+    for (int i = 0; i < limit; i++) {
+        ASSET_REGISTRY[i].karma = src[i];
+    }
+}
+
+void LoadPhaseAssets(StoryPhase* phase, GameContext* context){
+    if (!phase || !context) return;      // Check if the phase or context is NULL
 
     // 1. Handle Location Change
-    if (phase->location != STORY_LOC_NONE && (Location)phase->location != context->location) {
+    if (phase->location != STORY_LOC_NONE && (Location)phase->location != context->location){
         Location targetLoc = (Location)phase->location;
         LoadLocationAssets(targetLoc, context);
         context->player_teleport_requested = true; 
@@ -75,7 +101,8 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
     memset(context->worldNPCs, 0, sizeof(NPC) * 20);
     memset(context->worldItems, 0, sizeof(Item) * 20);
 
-    for (int i = 0; i < phase->interactable_count; i++) {
+    for (int i = 0; i < phase->interactable_count; i++){
+        // Find the asset in the registry
         AssetMetadata* meta = FindInRegistry(phase->interactables[i].id);
         if (!meta) continue;
 
@@ -116,28 +143,30 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
 }
 
 void LoadLocationAssets(Location location, GameContext* context) {
-    // Note: context->location update is handled by callers (state.c or interaction.c) 
-    // to avoid race conditions with map transition detection.
+    // Note: Temporary empty function
 }
 
-void UnloadLocationAssets(GameContext* context) {
-    if (context == NULL) return;
+void UnloadLocationAssets(GameContext* context){
+    if (context == NULL) return;       // Check if the context is NULL
 
-    if (context->worldNPCs != NULL) {
+    // Unload NPCs
+    if (context->worldNPCs != NULL){
         UnloadNPCs(context->worldNPCs, context->npcCount);
         free(context->worldNPCs);
         context->worldNPCs = NULL;
     }
     context->npcCount = 0;
 
-    if (context->worldItems != NULL) {
+    // Unload Items
+    if (context->worldItems != NULL){
         UnloadItems(context->worldItems, context->itemCount);
         free(context->worldItems);
         context->worldItems = NULL;
     }
     context->itemCount = 0;
     
-    if (context->worldDoors != NULL) {
+    // Unload Doors
+    if (context->worldDoors != NULL){
         free(context->worldDoors);
         context->worldDoors = NULL;
     }

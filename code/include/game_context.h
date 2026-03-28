@@ -1,3 +1,13 @@
+/**
+ * @file game_context.h
+ * @brief Global container for session-persistent data.
+ * 
+ * This file contains the definition of the GameContext struct, which is used to store
+ * all the data that needs to be passed between different systems in the game.
+ * 
+ * Authors: Andrew Zhuo and Cornelius Jabez Lim
+ */
+
 #ifndef GAME_CONTEXT_H
 #define GAME_CONTEXT_H
 
@@ -7,7 +17,6 @@
 #include "phone.h"
 #include "story.h"
 
-// Forward declarations to break circular dependencies
 typedef struct NPC NPC;
 typedef struct Item Item;
 typedef struct Door Door;

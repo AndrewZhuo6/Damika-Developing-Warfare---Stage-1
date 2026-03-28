@@ -5,7 +5,7 @@
 #include "assets.h"
 #include <stdbool.h>
 
-static char current_interactable_id[64] = "";
+static char current_interactable_id[64] = "";       // The ID of the current interactable object
 
 void LoadNPCs(NPC npcs[], int count){
     for (int i = 0; i < count; i++){
@@ -31,14 +31,14 @@ void UnloadItems(Item items[], int count){
     }
 }
 
-void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[], 
-    int npcCount, int itemCount, int doorCount,
-    Rectangle playerHitbox, Interactable** objectToInteractWith){
+void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[],  int npcCount,
+    int itemCount, int doorCount, Rectangle playerHitbox, Interactable** objectToInteractWith){
     
-    *objectToInteractWith = NULL;
-    float min_dist = 1e6; 
+    *objectToInteractWith = NULL;     // Set the object to interact with to NULL
+    float min_dist = 1e6;             // Set the minimum distance to a large value
     Vector2 playerPos = {playerHitbox.x + playerHitbox.width / 2.0f, playerHitbox.y + playerHitbox.height / 2.0f};
 
+    // Check for nearby NPCs
     for (int i = 0; i < npcCount; i++){
         if (CheckCollisionRecs(playerHitbox, worldNPCs[i].base.bounds)){
             worldNPCs[i].base.isActive = true;
@@ -52,6 +52,7 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[],
         } else {worldNPCs[i].base.isActive = false;}
     }
 
+    // Check for nearby items
     for (int i = 0; i < itemCount; i++){
         if (!worldItems[i].picked_up && CheckCollisionRecs(playerHitbox, worldItems[i].base.bounds)){
             worldItems[i].base.isActive = true;
@@ -65,6 +66,7 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[],
         } else {worldItems[i].base.isActive = false;}
     }
 
+    // Check for nearby doors
     for (int i = 0; i < doorCount; i++){
         if (CheckCollisionRecs(playerHitbox, worldDoors[i].base.bounds)){
             worldDoors[i].base.isActive = true;
@@ -82,15 +84,18 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[],
 void InteractWithObject(Interactable* objectToInteractWith, Dialogue* game_dialogue, 
     GameState* game_state, Character *player, Map *map, struct GameContext *game_context){
     
+    // If the game state is dialogue cutscene, interact with the NPC
     if (*game_state == DIALOGUE_CUTSCENE){
         InteractWithNPC(NULL, game_dialogue, game_state, game_context);
         return;
     }
 
+    // If the object to interact with is NULL, return
     if (objectToInteractWith == NULL){
         return;
     }
 
+    // Switch the type of the object to interact with
     switch (objectToInteractWith->type){
         case INTERACTABLE_TYPE_NPC:
             InteractWithNPC((NPC*)objectToInteractWith, game_dialogue, game_state, game_context);
@@ -111,6 +116,7 @@ void InteractWithObject(Interactable* objectToInteractWith, Dialogue* game_dialo
 }
 
 void InteractWithNPC(NPC *npc, Dialogue *game_dialogue, GameState *game_state, struct GameContext *game_context){
+    // If the game state is gameplay and the NPC is not NULL, load the interaction
     if (*game_state == GAMEPLAY && npc != NULL){
         LoadInteraction(npc->base.dialoguePath, game_dialogue);
         if (game_dialogue->line_count > 0 || game_dialogue->choice_count > 0){
@@ -128,8 +134,11 @@ void InteractWithNPC(NPC *npc, Dialogue *game_dialogue, GameState *game_state, s
             else if (IsKeyPressed(KEY_FOUR)) key = 4;
 
             if (key > 0 && key <= game_dialogue->choice_count){
+                // Get the index of the selected choice
                 int idx = key - 1;
+                // Clear the dialogue lines
                 memset(game_dialogue->lines, 0, sizeof(game_dialogue->lines));
+                // Copy the selected choice response to the dialogue lines
                 strncpy(game_dialogue->lines[0], game_dialogue->choice_responses[idx], MAX_LINE_LENGTH-1);
                 game_dialogue->line_count = 1;
                 game_dialogue->current_line = 0;
@@ -141,30 +150,19 @@ void InteractWithNPC(NPC *npc, Dialogue *game_dialogue, GameState *game_state, s
                     UpdateAssetKarma(current_interactable_id, game_dialogue->choice_karma[idx]);
                 }
                 
-                TraceLog(LOG_INFO, "CHOICE SELECTED: id=%s, idx=%d, ends=%d", current_interactable_id, idx, game_dialogue->choice_ends[idx]);
-                
                 // Story Progression Check
                 StoryPhase* active = GetActivePhase(&game_context->story);
-                if (active) {
-                    TraceLog(LOG_INFO, "STORY CHECK: phase=%s, cond=%d, target=%s %f", 
-                        active->name, active->end_condition.type, active->end_condition.target_id, active->end_condition.target_value);
-                }
 
                 if (active && active->end_condition.type == CONDITION_INTERACT_OBJECT){
                     if (strcmp(active->end_condition.target_id, current_interactable_id) == 0 &&
                         ((int)active->end_condition.target_value == (idx + 1) || (int)active->end_condition.target_value == 0)){
                         if (game_dialogue->choice_ends[idx] || (int)active->end_condition.target_value == 0){
-                            TraceLog(LOG_INFO, "STORY ADVANCE Triggered via choice.");
                             AdvanceStory(game_context);
                         }
                     }
                 }
-                
-                if (strstr(game_dialogue->lines[0], "END SET")){
-                    AdvanceStory(game_context);
-                }
             }
-            return; // BLOCKS standard SPACE progression during choice selection
+            return; // blocks standard SPACE progression during choice selection
         }
 
         // 2. Standard dialogue progression (only on SPACE)
@@ -199,12 +197,15 @@ void InteractWithNPC(NPC *npc, Dialogue *game_dialogue, GameState *game_state, s
 }
 
 void InteractWithItem(Item *item, Dialogue *game_dialogue, GameState *game_state, Character *player, struct GameContext *game_context){
+    // If the item is a pickup, add it to the player's inventory
     if (item->is_pickup){
+        // Add the item to the player's inventory
         strcpy(player->inventory[player->inventory_count], item->base.texturePath);
         player->item_count[player->inventory_count]++;
         player->inventory_count++;
         item->picked_up = true;
     } else{
+        // Load the interaction
         LoadInteraction(item->base.dialoguePath, game_dialogue);
         if (game_dialogue->line_count > 0 || game_dialogue->choice_count > 0){
             *game_state = DIALOGUE_CUTSCENE;
@@ -217,12 +218,16 @@ void InteractWithItem(Item *item, Dialogue *game_dialogue, GameState *game_state
 void InteractWithDoor(Door *door, Map *map, Character *player, struct GameContext *game_context){
     if (door == NULL || map == NULL || player == NULL || game_context == NULL) return;
 
+    // Get the target map and location
     char targetMap[128];
     strncpy(targetMap, door->targetMapPath, 127);
     Location targetLoc = door->targetLocation;
 
+    // Free the current map
     FreeMap(map);
+    // Initialize the new map
     *map = InitMap(targetMap);
+    // Set the player's position to the spawn position of the new map
     player->position = map->spawn_position;
 
     // Load static assets for this map
