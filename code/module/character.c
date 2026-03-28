@@ -16,11 +16,13 @@
 Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map){
     Character character = {0};
 
+    // Load character sprites
     character.sprite_idle = LoadTexture("../assets/images/character/idle.png");
     character.sprite_walk = LoadTexture("../assets/images/character/walk.png");
     character.sprite_run = LoadTexture("../assets/images/character/run.png");
     character.sprite = character.sprite_idle;
 
+    // Set character size and speed
     character.size = (Vector2){350.0f, 350.0f};
     character.speed = game_settings->mc_speed;
     character.direction = 0; // 0=Down, 1=Left, 2=Right, 3=Up
@@ -32,6 +34,7 @@ Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map)
     character.frame_counter = 0;
     character.frame_rect = (Rectangle){0.0f, 0.0f, (float)character.sprite.width / character.frame_number, (float)character.sprite.height / 4.0f};
 
+    // Set character stamina and sanity
     character.stamina = 100.0f;
     character.max_stamina = 100.0f;
     character.sanity = 0.0f;
@@ -39,6 +42,7 @@ Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map)
     character.exhausted = false;
     character.needs_shift_reset = false;
 
+    // Load character position and direction from game data
     if (game_data->position.x != -1.0f){
         character.position = game_data->position;
         character.direction = game_data->direction;
@@ -47,7 +51,7 @@ Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map)
             strcpy(character.inventory[i], game_data->inventory[i]);
             character.item_count[i] = game_data->item_count[i];
         }
-        character.sanity = game_data->player_sanity_level;
+        character.sanity = game_data->sanity;
     } else {
         character.position = game_map->spawn_position;
     }
@@ -78,6 +82,7 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
         }
     }
 
+    // Check if the character is moving or running
     bool is_moving = (movement.x != 0 || movement.y != 0);
     bool is_running = IsKeyDown(KEY_LEFT_SHIFT) && !character->exhausted && is_moving;
 
@@ -115,6 +120,7 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
         if (character->stamina > character->max_stamina) character->stamina = character->max_stamina;
         character->speed = game_settings->mc_speed;
         
+        // Check if the character is exhausted and needs to rest
         if (character->exhausted){
              if (!IsKeyDown(KEY_LEFT_SHIFT)) character->needs_shift_reset = false;
              if (!character->needs_shift_reset && character->stamina >= 20.0f) character->exhausted = false;
@@ -170,11 +176,13 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
 }
 
 void DrawCharacter(Character *character){
+    // Draw the character
     Rectangle dest_rect = {character->position.x, character->position.y, character->size.x, character->size.y};
     DrawTexturePro(character->sprite, character->frame_rect, dest_rect, (Vector2){0, 0}, 0, WHITE);
 }
 
 void CloseCharacter(Character *character){
+    // Unload character sprites
     UnloadTexture(character->sprite_idle);
     UnloadTexture(character->sprite_walk);
     UnloadTexture(character->sprite_run);

@@ -1,7 +1,18 @@
+/**
+ * @file story.h
+ * @brief Defines the data structures for story sets and phases.
+ * 
+ * This file is included by other modules that need to use the story system.
+ * 
+ * Authors: Andrew Zhuo
+ */
+
 #ifndef STORY_H
 #define STORY_H
 
 #include "quest.h"
+
+struct GameContext;
 
 #define MAX_QUESTS_PER_PHASE 10
 #define MAX_PHASES_PER_SET 10
@@ -14,6 +25,7 @@ typedef enum StoryConditionType {
     CONDITION_ALL_QUESTS_COMPLETE,    // Advance when all phase quests are done
     CONDITION_INTERACT_OBJECT,        // Advance when specific object interacted
     CONDITION_TIME_PASS,              // Advance when time passes
+    CONDITION_ENTER_LOCATION,         // Advance when entering a specific location
 } StoryConditionType;
 
 /**
@@ -21,10 +33,11 @@ typedef enum StoryConditionType {
  */
 typedef enum {
     STORY_LOC_NONE = -1,             // No location
-    STORY_LOC_INTERIOR = 0,          // Interior location
+    STORY_LOC_APARTMENT = 0,         // Apartment location
     STORY_LOC_EXTERIOR = 1,          // Exterior location
-    STORY_LOC_FARM = 2,              // Farm location
-    STORY_LOC_FOREST = 3,            // Forest location
+    STORY_LOC_INTERIOR = 2,          // Interior location
+    STORY_LOC_FARM = 3,              // Farm location
+    STORY_LOC_FOREST = 4,            // Forest location
 } StoryLocation;
 
 /**
@@ -89,17 +102,17 @@ void LoadStoryDay(StorySystem* story, const char* path);
 /**
  * @brief Checks phase progression every frame.
  *
- * @param story Pointer to the StorySystem.
+ * @param game_context Pointer to the GameContext.
  * @param delta Time elapsed since the last frame.
  */
-void UpdateStory(StorySystem* story, float delta);
+void UpdateStory(struct GameContext* game_context, float delta);
 
 /**
  * @brief Force-advances the story to the next phase.
  *
- * @param story Pointer to the StorySystem.
+ * @param game_context Pointer to the GameContext.
  */
-void AdvanceStory(StorySystem* story);
+void AdvanceStory(struct GameContext* game_context);
 
 /**
  * @brief Returns a pointer to the current active phase.

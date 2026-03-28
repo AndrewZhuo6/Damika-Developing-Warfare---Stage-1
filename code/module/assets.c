@@ -1,3 +1,10 @@
+/**
+ * @file assets.c
+ * @brief Implementation of the assets loading and management system.
+ *
+ * Author: Andrew Zhuo
+ */
+
 #include "assets.h"
 #include "interaction.h"
 #include <stdlib.h>
@@ -14,43 +21,72 @@ typedef struct {
     Rectangle bounds;
     InteractableType type;
     char dialoguePath[128];
+    int karma;                 // Persistent karma for this NPC / Object
 } AssetMetadata;
 
 static AssetMetadata ASSET_REGISTRY[] = {
     // --- Interior Assets ---
-    {"fridge", "../assets/map/map_int/fridge.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/fridge.txt"},
-    {"plant", "../assets/map/map_int/plant.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/plant.txt"},
-    {"sofa", "../assets/map/map_int/couchff.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/sofa.txt"},
-    {"oven", "../assets/map/map_int/oven.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/oven.txt"},
-    {"sink", "../assets/map/map_int/sink cabinet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/sink.txt"},
-    {"bathtub", "../assets/map/map_int/bathtub.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/bathtub.txt"},
-    {"toilet", "../assets/map/map_int/toilet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/toilet.txt"},
-    {"lamp", "../assets/map/map_int/lamp.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/lamp.txt"},
-    {"cabinet", "../assets/map/map_int/tallcabinet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/cabinet.txt"},
-    {"bed", "../assets/map/map_int/bed.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/bed.txt"},
-    {"table", "../assets/map/map_int/foodtable.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/table.txt"},
+    {"fridge", "../assets/map/map_apart/fridge.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/fridge.txt", 0},
+    {"plant", "../assets/map/map_apart/plant.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/plant.txt", 0},
+    {"sofa", "../assets/map/map_apart/couchff.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/sofa.txt", 0},
+    {"oven", "../assets/map/map_apart/oven.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/oven.txt", 0},
+    {"sink", "../assets/map/map_apart/sink cabinet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/sink.txt", 0},
+    {"bathtub", "../assets/map/map_apart/bathtub.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/bathtub.txt", 0},
+    {"toilet", "../assets/map/map_apart/toilet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/toilet.txt", 0},
+    {"lamp", "../assets/map/map_apart/lamp.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/lamp.txt", 0},
+    {"cabinet", "../assets/map/map_apart/tallcabinet.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/cabinet.txt", 0},
+    {"bed", "../assets/map/map_apart/bed.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/bed.txt", 0},
+    {"table", "../assets/map/map_apart/foodtable.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase1/table.txt", 0},
 
     // --- Exterior Assets ---
-    {"potato", "../assets/images/item/potato.png", {1200, 1500, 64, 64}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/potato.txt"},
-    {"big tree", "../assets/images/item/tree.png", {1500, 1000, 192, 256}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/big tree.txt"},
-    {"tree", "../assets/images/npc/tree.png", {1000, 1100, 96, 128}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/tree.txt"},
-    {"farmer", "../assets/images/npc/farmer.png", {1600, 1200, 64, 96}, INTERACTABLE_TYPE_NPC, "../assets/text/day1/phase2/farmer.txt"},
+    {"potato", "../assets/images/items/potato.png", {1200, 1500, 64, 64}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/potato.txt", 0},
+    {"big tree", "../assets/map/map_ext/big tree.png", {1500, 1000, 192, 256}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/big tree.txt", 0},
+    {"tree", "../assets/map/map_ext/tree.png", {1000, 1100, 96, 128}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/tree.txt", 0},
+    {"farmer", "../assets/images/character/oldman.png", {1600, 1200, 64, 96}, INTERACTABLE_TYPE_NPC, "../assets/text/day1/phase2/farmer.txt", 0},
 };
 
 static int REGISTRY_COUNT = sizeof(ASSET_REGISTRY) / sizeof(ASSET_REGISTRY[0]);
 
-static AssetMetadata* FindInRegistry(const char* id) {
+static AssetMetadata* FindInRegistry(const char* id){
+    // Find the asset in the registry
     for (int i = 0; i < REGISTRY_COUNT; i++) {
         if (strcmp(ASSET_REGISTRY[i].id, id) == 0) return &ASSET_REGISTRY[i];
     }
     return NULL;
 }
 
-void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
-    if (!phase || !context) return;
+void UpdateAssetKarma(const char* id, int delta){
+    // Update the karma of the asset
+    AssetMetadata* meta = FindInRegistry(id);
+    if (meta) {
+        meta->karma += delta;
+        if (meta->karma > 100) meta->karma = 100;
+        if (meta->karma < -100) meta->karma = -100; 
+    }
+}
+
+int GetRegistryKarma(int* dest, int max_size){
+    // Get the karma of the asset
+    int count = (REGISTRY_COUNT < max_size) ? REGISTRY_COUNT : max_size;
+    for (int i = 0; i < count; i++) {
+        dest[i] = ASSET_REGISTRY[i].karma;
+    }
+    return count;
+}
+
+void SetRegistryKarma(int* src, int count){
+    // Set the karma of the asset
+    int limit = (REGISTRY_COUNT < count) ? REGISTRY_COUNT : count;
+    for (int i = 0; i < limit; i++) {
+        ASSET_REGISTRY[i].karma = src[i];
+    }
+}
+
+void LoadPhaseAssets(StoryPhase* phase, GameContext* context){
+    if (!phase || !context) return;      // Check if the phase or context is NULL
 
     // 1. Handle Location Change
-    if (phase->location != STORY_LOC_NONE && (Location)phase->location != context->location) {
+    if (phase->location != STORY_LOC_NONE && (Location)phase->location != context->location){
         Location targetLoc = (Location)phase->location;
         LoadLocationAssets(targetLoc, context);
         context->player_teleport_requested = true; 
@@ -65,7 +101,8 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
     memset(context->worldNPCs, 0, sizeof(NPC) * 20);
     memset(context->worldItems, 0, sizeof(Item) * 20);
 
-    for (int i = 0; i < phase->interactable_count; i++) {
+    for (int i = 0; i < phase->interactable_count; i++){
+        // Find the asset in the registry
         AssetMetadata* meta = FindInRegistry(phase->interactables[i].id);
         if (!meta) continue;
 
@@ -106,27 +143,30 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context) {
 }
 
 void LoadLocationAssets(Location location, GameContext* context) {
-    context->location = location;
+    // Note: Temporary empty function
 }
 
-void UnloadLocationAssets(GameContext* context) {
-    if (context == NULL) return;
+void UnloadLocationAssets(GameContext* context){
+    if (context == NULL) return;       // Check if the context is NULL
 
-    if (context->worldNPCs != NULL) {
+    // Unload NPCs
+    if (context->worldNPCs != NULL){
         UnloadNPCs(context->worldNPCs, context->npcCount);
         free(context->worldNPCs);
         context->worldNPCs = NULL;
     }
     context->npcCount = 0;
 
-    if (context->worldItems != NULL) {
+    // Unload Items
+    if (context->worldItems != NULL){
         UnloadItems(context->worldItems, context->itemCount);
         free(context->worldItems);
         context->worldItems = NULL;
     }
     context->itemCount = 0;
     
-    if (context->worldDoors != NULL) {
+    // Unload Doors
+    if (context->worldDoors != NULL){
         free(context->worldDoors);
         context->worldDoors = NULL;
     }

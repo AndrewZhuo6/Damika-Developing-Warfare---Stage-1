@@ -1,3 +1,12 @@
+/**
+ * @file quest.h
+ * @brief Defines the data structures for quests and the quest system.
+ * 
+ * This file is included by other modules that need to use the quest system.
+ * 
+ * Authors: Andrew Zhuo
+ */
+
 #ifndef QUEST_H
 #define QUEST_H
 

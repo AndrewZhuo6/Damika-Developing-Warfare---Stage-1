@@ -46,26 +46,24 @@ typedef struct {
 
 /**
  * @brief Resets phone data to a clean, idle state.
+ *
  * @param phone Pointer to the phone structure.
  */
 void InitPhone(Phone *phone);
 
 /**
  * @brief Triggers a new incoming message alert.
+ *
  * @param phone Pointer to the phone.
  * @param msg The message body.
  * @param reply1 The first reply option.
  * @param reply2 The second reply option.
  */
-void TriggerPhoneNotification(
-    Phone *phone,
-    const char *msg,
-    const char *reply1,
-    const char *reply2
-);
+void TriggerPhoneNotification(Phone *phone, const char *msg, const char *reply1, const char *reply2);
 
 /**
  * @brief Updates phone timers and auto-state transitions.
+ *
  * @param phone Pointer to the phone.
  * @param delta Time since last frame.
  */
@@ -73,12 +71,14 @@ void UpdatePhone(Phone *phone, float delta);
 
 /**
  * @brief Renders the phone UI (notification or full screen) to the screen.
+ *
  * @param phone Pointer to the phone to draw.
  */
 void DrawPhone(Phone *phone);
 
 /**
  * @brief Handles player input for selecting replies and opening/closing the phone.
+ *
  * @param phone Pointer to the phone.
  */
 void HandlePhoneInput(Phone *phone);

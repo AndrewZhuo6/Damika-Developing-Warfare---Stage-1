@@ -1,3 +1,13 @@
+/**
+ * @file interaction.h
+ * @brief Function prototypes and structures for the interaction system.
+ * 
+ * This file contains the definition of the Interactable struct, which is used to store
+ * all the data that needs to be passed between different systems in the game.
+ * 
+ * Authors: Andrew Zhuo and Cornelius Jabez Lim
+ */
+
 #ifndef INTERACTION_H
 #define INTERACTION_H
 

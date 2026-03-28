@@ -12,13 +12,14 @@
 #include "raylib.h"
 #include <string.h>
 
-/** @brief Resets phone state and clears message buffers. */
 void InitPhone(Phone *phone){
+    // Initialize phone and clear message size
     phone->notif_width = 300;
     phone->notif_height = 60;
     phone->phone_width = 400;
     phone->phone_height = 600;
-    
+
+    // Initialize phone state and clear message buffers
     phone->state = PHONE_IDLE;
     phone->notif_timer = 0;
     phone->hover_index = -1;
@@ -28,12 +29,8 @@ void InitPhone(Phone *phone){
     memset(phone->selected_reply, 0, sizeof(phone->selected_reply));
 }
 
-/**
- * @brief Triggers a new message notification.
- * 
- * Sets the notification to auto-dismiss after 5 seconds if not opened.
- */
 void TriggerPhoneNotification(Phone *phone, const char *msg, const char *reply1, const char *reply2){
+    // Trigger a new message notification
     strncpy(phone->message, msg, sizeof(phone->message) - 1);
     strncpy(phone->replies[0], reply1, sizeof(phone->replies[0]) - 1);
     strncpy(phone->replies[1], reply2, sizeof(phone->replies[1]) - 1);
@@ -44,8 +41,8 @@ void TriggerPhoneNotification(Phone *phone, const char *msg, const char *reply1,
     phone->already_triggered = true;
 }
 
-/** @brief Updates the notification auto-dismiss timer. */
 void UpdatePhone(Phone *phone, float delta){
+    // Update the notification auto-dismiss timer
     if (phone->state == PHONE_NOTIFICATION){
         phone->notif_timer -= delta;
         if (phone->notif_timer <= 0){
@@ -54,13 +51,8 @@ void UpdatePhone(Phone *phone, float delta){
     }
 }
 
-/**
- * @brief Renders the phone UI overlays.
- * 
- * Handles both the small 'New Message' pop-up and the full-screen 
- * messaging interface.
- */
 void DrawPhone(Phone *phone){
+    // Draw the phone UI overlays
     if (phone->state == PHONE_IDLE) return;
 
     int screenWidth = GetScreenWidth();
@@ -123,11 +115,6 @@ void DrawPhone(Phone *phone){
     }
 }
 
-/**
- * @brief Handles keyboard input for opening/closing/replying on the phone.
- * 
- * Uses 'R' as the primary interact key and 'ENTER' for replying.
- */
 void HandlePhoneInput(Phone *phone){
     // Toggle Open/Close
     if (IsKeyPressed(KEY_R)){

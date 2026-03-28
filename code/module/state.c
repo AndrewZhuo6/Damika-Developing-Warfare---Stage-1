@@ -15,21 +15,14 @@
 #include "audio.h"
 #include "interactive.h"
 #include "assets.h"
+#include "story.h"
 #include <stdio.h>
 
-/**
- * @brief Logic orchestrator for state-based updates.
- * 
- * This function is called once per frame. It routes execution based on the 
- * current value of game_state and manages transitions like starting a new game,
- * loading data, or handling the intro cutscene.
- * 
- * @return 1 if the game should Quit, 0 otherwise.
- */
 int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* player, 
-    Settings* game_settings, Map* game_map, 
-    GameContext* game_context, Audio* game_audio, Vector2 map_size, Scene* game_scene){
+    Settings* game_settings, Map* game_map, GameContext* game_context, Audio* game_audio,
+    Vector2 map_size, Scene* game_scene){
 
+    // Update game based on the current state
     switch(*game_state){
         case MAINMENU: {
             // --- Main Menu Animation (Throttled for Performance) ---
@@ -54,7 +47,8 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
             
             if (game_interactive->is_new_game_clicked){
                 // 1. Reset state and start gameplay directly
-                ResetGameData(player, game_context->worldItems, game_context->itemCount, game_map->spawn_position);
+                ResetGameData(game_context, game_map->spawn_position);
+                LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt"); // Ensure Day 1
                 *game_state = GAMEPLAY;
                 game_interactive->is_new_game_clicked = false;
                 
@@ -67,7 +61,7 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 
             } else if (game_interactive->is_continue_clicked){
                 // 1. Load data and start gameplay directly
-                HandleGameData(player, game_context->worldItems, game_context->itemCount, game_settings, game_map);
+                HandleGameData(game_context, game_map, game_settings);
                 *game_state = GAMEPLAY; 
                 game_interactive->is_continue_clicked = false;
                 
@@ -76,9 +70,11 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 SetTargetFPS(60);
                 
             } else if (game_interactive->is_settings_clicked){
+                // Save the current state to the settings previous state
                 game_context->settings_previous_state = *game_state;
                 *game_state = SETTINGS;
             } else if (game_interactive->is_quit_clicked){
+                // Quit the game
                 return 1;
             }
             ShowCursor();
@@ -93,30 +89,38 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
             }
             
             UpdateGameContext(game_context, map_size);
-            UpdateStory(&game_context->story, GetFrameTime());
+            UpdateStory(game_context, GetFrameTime());
 
             // --- Phase Change Detection & Dynamic Asset Loading ---
             static int last_phase = -1;
             static int last_set = -1;
             StoryPhase* active = GetActivePhase(&game_context->story);
             if (active && (game_context->story.current_phase_idx != last_phase || game_context->story.current_set_idx != last_set)) {
-                LoadPhaseAssets(active, game_context);
-                last_phase = game_context->story.current_phase_idx;
-                last_set = game_context->story.current_set_idx;
-                
-                if (game_context->player_teleport_requested) {
-                    // Swap Map based on new location
-                    if (active->location == STORY_LOC_INTERIOR) {
+                // 1. Detect and handle map transition before loading assets
+                if (active->location != STORY_LOC_NONE && (Location)active->location != game_context->location) {
+                    if (active->location == STORY_LOC_APARTMENT) {
                         FreeMap(game_map);
-                        *game_map = InitMap("../assets/map/map_int/APARTMENT MAP.json");
+                        *game_map = InitMap("../assets/map/map_apart/APARTMENT MAP.json");
                     } else if (active->location == STORY_LOC_EXTERIOR) {
                         FreeMap(game_map);
                         *game_map = InitMap("../assets/map/map_ext/MAINMAP.json");
                     }
+                    game_context->location = (Location)active->location;
                     player->position = game_map->spawn_position;
-                    game_context->player_teleport_requested = false;
-                    TraceLog(LOG_INFO, "PHASE TRANSITION: Teleported to %s spawn.", (active->location == STORY_LOC_INTERIOR) ? "Interior" : "Exterior");
+
+                    // Check if this map change satisfies an ENTER_LOCATION condition
+                    if (active->end_condition.type == CONDITION_ENTER_LOCATION && 
+                        (int)active->end_condition.target_value == (int)active->location){
+                        AdvanceStory(game_context);
+                    }
                 }
+
+                // 2. Now load assets (will correctly find objects in the NEW map)
+                LoadPhaseAssets(active, game_context);
+                
+                last_phase = game_context->story.current_phase_idx;
+                last_set = game_context->story.current_set_idx;
+                game_context->player_teleport_requested = false; // Reset if it was set
             }
 
             HandlePhoneInput(&game_context->phone);
@@ -126,6 +130,14 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 ShowCursor();
             } else{
                 HideCursor();
+            }
+
+            // Pause Trigger
+            if (IsKeyPressed(KEY_ESCAPE)){
+                game_context->previous_state = *game_state;
+                *game_state = PAUSE;
+                UpdateInteractiveLayout(game_interactive, PAUSE, game_settings);
+                ShowCursor();
             }
             break;
 
@@ -144,12 +156,12 @@ int UpdateGame(GameState* game_state, Interactive* game_interactive, Character* 
                 SetTargetFPS(24);
                 *game_state = SETTINGS;
             } else if (game_interactive->is_main_menu_clicked){
-                SaveData(player, game_context->worldItems, game_context->itemCount, game_settings);
+                SaveData(game_context, game_settings);
                 *game_state = MAINMENU;
                 UpdateInteractiveLayout(game_interactive, MAINMENU, game_settings);
                 game_interactive->is_main_menu_clicked = false;
             } else if (game_interactive->is_quit_clicked){
-                SaveData(player, game_context->worldItems, game_context->itemCount, game_settings);
+                SaveData(game_context, game_settings);
                 return 1;
             }
             ShowCursor();

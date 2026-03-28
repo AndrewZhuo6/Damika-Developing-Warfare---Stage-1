@@ -9,13 +9,8 @@
 
 #include "settings.h"
 
-/**
- * @brief Initializes the game settings with hardcoded defaults.
- * 
- * Sets the window resolution to 1200x800, enables VSync, and sets default 
- * audio levels and character movement parameters.
- */
 Settings InitSettings(){
+    // Initialize game settings with hardcoded defaults
     Settings new_settings = {0};
     new_settings.window_width = 1200;
     new_settings.window_height = 800;

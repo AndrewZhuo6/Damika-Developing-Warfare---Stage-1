@@ -14,12 +14,6 @@
 #include <stdio.h>
 #include "map.h"
 
-/**
- * @brief Loads a Tiled map JSON file and its associated tileset textures.
- * 
- * @param path FS path to the .json map file.
- * @return Populated Map struct with VRAM textures and cute_tiled handle.
- */
 Map InitMap(const char* path){
     Map map = {0};
     map.tiled_map = cute_tiled_load_map_from_file(path, NULL);
@@ -63,16 +57,10 @@ Map InitMap(const char* path){
     return map;
 }
 
-/**
- * @brief Renders the tile layers of the map.
- * 
- * Iterates through layers, identifies tiles by Global ID (GID), and 
- * handles Tiled's bit-flagged transformations (horiz/vert/diag flips).
- */
 void DrawMap(Map* map){
     cute_tiled_layer_t* layer = map->tiled_map->layers;
     while (layer){
-        // We only render 'tilelayer' types here; 'objectgroup' is used for physics
+        // It only render 'tilelayer' types here; 'objectgroup' is used for physics
         if (strcmp(layer->type.ptr, "tilelayer") == 0){
             for (int i = 0; i < layer->data_count; i++){
                 unsigned int raw_gid = (unsigned int)layer->data[i];
@@ -145,22 +133,17 @@ void DrawMap(Map* map){
     }
 }
 
-/** @brief Deallocates map textures and the parsed Tiled map object. */
 void FreeMap(Map* map){
+    // Free the map textures and the parsed Tiled map object
     for (int i = 0; i < map->tileset_count; i++){
         UnloadTexture(map->textures[i]);
     }
     cute_tiled_free_map(map->tiled_map);
 }
 
-/**
- * @brief Spatial query: checks if a world-space rectangle hits a collision object.
- * 
- * Scans Tiled 'objectgroup' layers for rectangles. 
- * Essential for player-vs-wall collisions.
- */
 bool CheckMapCollision(Map* map, Rectangle rect){
     cute_tiled_layer_t* layer = map->tiled_map->layers;
+    // Check for collision with objects in the map
     while (layer){
         if (strcmp(layer->type.ptr, "objectgroup") == 0){
             cute_tiled_object_t* object = layer->objects;
@@ -179,16 +162,11 @@ bool CheckMapCollision(Map* map, Rectangle rect){
     return false;
 }
 
-/**
- * @brief Retrieves the visual bounds of a named object from Tiled Object Layers.
- * 
- * Scans all 'objectgroup' layers for an object with a matching 'name' field.
- * Returns a Rectangle{0,0,0,0} if not found.
- */
 Rectangle GetMapObjectBounds(Map* map, const char* name) {
     if (!map || !map->tiled_map || !name || strlen(name) == 0) return (Rectangle){0, 0, 0, 0};
     
     cute_tiled_layer_t* layer = map->tiled_map->layers;
+    // Get the visual bounds of a named object from Tiled Object Layers
     while (layer) {
         if (strcmp(layer->type.ptr, "objectgroup") == 0) {
             cute_tiled_object_t* object = layer->objects;

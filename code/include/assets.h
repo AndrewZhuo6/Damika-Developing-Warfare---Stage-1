@@ -1,3 +1,12 @@
+/**
+ * @file assets.h
+ * @brief Header file for assets management.
+ * 
+ * This module handles loading and unloading assets for the game.
+ * 
+ * Authors: Andrew Zhuo
+ */
+
 #ifndef ASSETS_H
 #define ASSETS_H
 
@@ -27,5 +36,30 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context);
  * @param context The game context to unload assets from.
  */
 void UnloadLocationAssets(GameContext* context);
+
+/**
+ * @brief Updates the persistent karma for an asset in the registry.
+ * 
+ * @param id The unique ID of the asset.
+ * @param delta The amount to change karma by.
+ */
+void UpdateAssetKarma(const char* id, int delta);
+
+/**
+ * @brief Populates an array with all persistent karma values from the registry.
+ * 
+ * @param dest The array to populate.
+ * @param max_size The maximum size of the array.
+ * @return The number of values copied.
+ */
+int GetRegistryKarma(int* dest, int max_size);
+
+/**
+ * @brief Updates the registry with new karma values.
+ * 
+ * @param src The array to copy from.
+ * @param count The number of values to copy.
+ */
+void SetRegistryKarma(int* src, int count);
 
 #endif

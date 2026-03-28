@@ -1,0 +1,8 @@
+[CHOICE1] Hey!
+    [RESPONSE] Huh? Ah you must be the new kid.
+[CHOICE2] Excuse me, are you farmer Jhonny?
+    [RESPONSE] Sure am! You that Kane kid I hired?
+    [KARMA] +
+[CHOICE3] You the guy who hired me?
+    [RESPONSE] Awfully rude, aren't you?
+    [KARMA] -

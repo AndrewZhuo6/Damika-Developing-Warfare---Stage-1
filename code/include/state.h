@@ -38,12 +38,22 @@ typedef enum {
  * Based on the current GameState, this function calls specific module
  * updates (Character, Phone, Interactive, etc.).
  * 
+ * @param game_state Pointer to the game state.
+ * @param game_interactive Pointer to the interactive.
+ * @param player Pointer to the player.
+ * @param game_settings Pointer to the settings.
+ * @param game_map Pointer to the map.
+ * @param game_context Pointer to the game context.
+ * @param game_audio Pointer to the audio.
+ * @param map_size Size of the map.
+ * @param game_scene Pointer to the scene.
+ * 
  * @return 1 if the game should exit (e.g., Quit clicked), 0 to continue.
  */
 int UpdateGame(
 	GameState *game_state, struct Interactive *game_interactive, Character *player,
-	Settings *game_settings, Map *game_map,
-	GameContext *game_context, Audio *game_audio, Vector2 map_size, Scene *game_scene
+	Settings *game_settings, Map *game_map, GameContext *game_context, Audio *game_audio,
+	Vector2 map_size, Scene *game_scene
 );
 
 #endif

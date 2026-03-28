@@ -11,6 +11,8 @@
 
 Scene InitScene(Settings* game_settings){
     Scene new_scene = {0};
+
+    // Load all textures for the scene
     new_scene.mainmenu_background = LoadTexture("../assets/images/background/main_menu/main_menu.png");
     new_scene.pause_menu_background = LoadTexture("../assets/images/background/pause/pause.png");
     new_scene.vignette = LoadTexture("../assets/images/background/vignette/vignette.png");
@@ -18,6 +20,7 @@ Scene InitScene(Settings* game_settings){
     new_scene.current_knob_frame_texture = (Texture2D){0};
     new_scene.cutscene_timer = 0.0f;
     new_scene.current_cutscene_frame = 0;
+
     return new_scene;
 }
 
@@ -28,46 +31,52 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
     BeginDrawing();
     ClearBackground(RAYWHITE);
 
-    if (*game_state == MAINMENU) {
+    // Draw game based on the current state
+    if (*game_state == MAINMENU){
         DrawMainMenu(game_scene, game_interactive);
-    } else if (*game_state == SETTINGS) {
+    } else if (*game_state == SETTINGS){
         DrawSettings(game_scene, game_settings, game_interactive);
-    } else if (*game_state == PAUSE) {
+    } else if (*game_state == PAUSE){
         DrawPauseMenu(game_scene, game_settings, game_interactive);
-    } else if (*game_state == PHOTO_CUTSCENE) {
+    } else if (*game_state == PHOTO_CUTSCENE){
         DrawTexturePro(game_scene->current_cutscene_frame_texture,
             (Rectangle){0, 0, (float)game_scene->current_cutscene_frame_texture.width, (float)game_scene->current_cutscene_frame_texture.height},
             (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
             (Vector2){0, 0}, 0.0f, WHITE);
             
-        if (game_scene->cutscene_timer < 5.0f) {
+        if (game_scene->cutscene_timer < 5.0f){
             DrawText("Double click 'Enter' to skip", GetScreenWidth() - 300, GetScreenHeight() - 40, 20, LIGHTGRAY);
         }
-    } else {
+    } else{
         DrawGameplay(game_scene, game_settings, game_interactive, game_map, player, worldNPCs, worldItems, game_context);
         
+        // Draw vignette to create a horror feel
         DrawTexturePro(game_scene->vignette,
             (Rectangle){0, 0, (float)game_scene->vignette.width, (float)game_scene->vignette.height},
             (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
             (Vector2){0, 0}, 0.0f, WHITE);
 
+        // Draw dialogue box
         if (*game_state == DIALOGUE_CUTSCENE){
             DrawRectangle(0, GetScreenHeight() - 200, GetScreenWidth(), 200, Fade(BLACK, 0.8f));
             const char *line = game_dialogue->lines[game_dialogue->current_line];
             DrawText(line, GetScreenWidth() / 2 - MeasureText(line, 20) / 2, GetScreenHeight() - 170, 20, WHITE);
 
             if (game_dialogue->current_line >= game_dialogue->line_count - 1 && game_dialogue->choice_count > 0){
-                for (int i = 0; i < game_dialogue->choice_count; i++) {
+                for (int i = 0; i < game_dialogue->choice_count; i++){
                     char choiceText[128];
                     sprintf(choiceText, "%d. %s", i + 1, game_dialogue->choices[i]);
                     DrawText(choiceText, 100, GetScreenHeight() - 130 + (i * 30), 20, YELLOW);
                 }
-            } else {
+            } else{
                 DrawText("Press 'SPACE' to continue", GetScreenWidth() - 300, GetScreenHeight() - 40, 20, GRAY);
             }
         }
+
+        // Draw phone
         DrawPhone(&game_context->phone);
         
+        // Draw objectives
         StoryPhase* active_phase = GetActivePhase(&game_context->story);
         if (active_phase && active_phase->quest_count > 0) {
             int boxPadding = 15;
@@ -88,6 +97,7 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
                 DrawText(qText, 35, 55 + (i * 25), 18, qColor);
             }
             
+            // Draw tooltip for tutorial in SET1-PHASE1
             if (strcmp(active_phase->name, "SET1-PHASE1") == 0) {
                 const char* tooltip = NULL;
                 if (!active_phase->quests[0].completed && *game_state == GAMEPLAY) tooltip = "WASD TO MOVE";
@@ -105,6 +115,7 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
 }
 
 void DrawMainMenu(Scene* scene, Interactive* game_interactive){
+    // Draw main menu background
     DrawTexturePro(scene->current_cutscene_frame_texture, 
         (Rectangle){0, 0, (float)scene->current_cutscene_frame_texture.width, (float)scene->current_cutscene_frame_texture.height},
         (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
@@ -117,6 +128,7 @@ void DrawMainMenu(Scene* scene, Interactive* game_interactive){
 }
 
 void DrawPauseMenu(Scene* scene, Settings* game_settings, Interactive* game_interactive){
+    // Draw pause menu background
     DrawTexturePro(scene->pause_menu_background, 
         (Rectangle){0, 0, (float)scene->pause_menu_background.width, (float)scene->pause_menu_background.height},
         (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
@@ -129,6 +141,7 @@ void DrawPauseMenu(Scene* scene, Settings* game_settings, Interactive* game_inte
 }
 
 void DrawSettings(Scene* scene, Settings* game_settings, Interactive* game_interactive){
+    // Draw settings background
     DrawTexturePro(scene->current_cutscene_frame_texture, 
         (Rectangle){0, 0, (float)scene->current_cutscene_frame_texture.width, (float)scene->current_cutscene_frame_texture.height},
         (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
@@ -143,6 +156,7 @@ void DrawSettings(Scene* scene, Settings* game_settings, Interactive* game_inter
 
 void DrawGameplay(Scene* scene, Settings* game_settings, Interactive* game_interactive, Map* game_map,
                 Character* player, NPC worldNPCs[], Item worldItems[], GameContext* game_context){
+    // Draw gameplay
     BeginMode2D(game_context->camera);
     DrawMap(game_map);
     DrawCharacter(player);
@@ -158,13 +172,15 @@ void DrawGameplay(Scene* scene, Settings* game_settings, Interactive* game_inter
 }
 
 void LoadCutsceneFrame(Scene *scene, int frame_index, Settings *game_settings){
+    // Load cutscene frame
     if (scene->current_cutscene_frame_texture.id != 0) UnloadTexture(scene->current_cutscene_frame_texture);
     char path[100];
     sprintf(path, "../assets/videos/cutscene/frame%04d.qoi", frame_index);
     scene->current_cutscene_frame_texture = LoadTexture(path);
 }
 
-void LoadMenuFrame(Scene *scene, int frame_index, bool is_save_available) {
+void LoadMenuFrame(Scene *scene, int frame_index, bool is_save_available){
+    // Load menu frame
     if (scene->current_cutscene_frame_texture.id != 0) UnloadTexture(scene->current_cutscene_frame_texture);
     char path[100];
     const char* folder = is_save_available ? "saved_game" : "new_game";
@@ -172,14 +188,16 @@ void LoadMenuFrame(Scene *scene, int frame_index, bool is_save_available) {
     scene->current_cutscene_frame_texture = LoadTexture(path);
 }
 
-void LoadSettingsFrame(Scene *scene, int frame_index) {
+void LoadSettingsFrame(Scene *scene, int frame_index){
+    // Load settings frame
     if (scene->current_cutscene_frame_texture.id != 0) UnloadTexture(scene->current_cutscene_frame_texture);
     char path[100];
     sprintf(path, "../assets/videos/slider_bar/frame%04d.qoi", frame_index);
     scene->current_cutscene_frame_texture = LoadTexture(path);
 }
 
-void LoadKnobFrame(Scene *scene, int frame_index) {
+void LoadKnobFrame(Scene *scene, int frame_index){
+    // Load knob frame
     if (scene->current_knob_frame_texture.id != 0) UnloadTexture(scene->current_knob_frame_texture);
     char path[100];
     sprintf(path, "../assets/videos/slider_knob/frame%04d.qoi", frame_index);
@@ -187,6 +205,7 @@ void LoadKnobFrame(Scene *scene, int frame_index) {
 }
 
 void ClearCutscene(Scene* scene){
+    // Clear cutscene
     if (scene->current_cutscene_frame_texture.id != 0){
         UnloadTexture(scene->current_cutscene_frame_texture);
         scene->current_cutscene_frame_texture.id = 0;
@@ -194,6 +213,7 @@ void ClearCutscene(Scene* scene){
 }
 
 void CloseScene(Scene* scene){
+    // Close scene
     UnloadTexture(scene->mainmenu_background);
     UnloadTexture(scene->pause_menu_background);
     UnloadTexture(scene->vignette);

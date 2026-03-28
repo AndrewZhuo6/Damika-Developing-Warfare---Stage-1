@@ -12,9 +12,6 @@
 #include "raylib.h"
 #include "raymath.h"
 
-/**
- * @brief Loads common button textures and sets default slider dimensions.
- */
 Interactive InitInteractive(Settings* game_settings){
     Interactive new_interactive = {0};
 
@@ -37,12 +34,6 @@ Interactive InitInteractive(Settings* game_settings){
     return new_interactive;
 }
 
-/**
- * @brief Recalculates screen-space rectangles for all buttons.
- * 
- * Positions buttons in a vertical stack in the center of the screen.
- * Differing logic for MAINMENU vs PAUSE to prioritize specific buttons.
- */
 void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings* game_settings){
     float screen_width = (float)GetScreenWidth();
     float screen_height = (float)GetScreenHeight();
@@ -85,6 +76,7 @@ void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings*
                 (float)interactive->new_game_button.width * 1.9f * scale_x, 
                 slot_h * 2.0f
             };
+            interactive->continue_bounds = (Rectangle){0, 0, 0, 0};
         }
         interactive->settings_bounds = (Rectangle){
             screen_width / 2.0f - (float)interactive->settings_button.width * 0.95f * scale_x, 
@@ -129,8 +121,6 @@ void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings*
         };
     }
 
-    // Volume slider placement (scaled from 1200x800 reference)
-    // Using reference values: bar(770x5), knob(100x120), back_btn(460x115)
     float bar_w = interactive->bar_width * scale_x;
     float bar_h = interactive->bar_height * scale_y;
     interactive->volume_slider_bar = (Rectangle){ 
@@ -155,12 +145,6 @@ void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings*
     };
 }
 
-/**
- * @brief Processes mouse interaction and updates state flags.
- * 
- * Handles button hovering, clicking, and the click-and-drag logic for 
- * the settings volume slider.
- */
 void UpdateInteractive(Interactive* interactive, Settings* game_settings){
     Vector2 mouse_position = GetMousePosition();
 
@@ -222,10 +206,8 @@ void UpdateInteractive(Interactive* interactive, Settings* game_settings){
     }
 }
 
-/**
- * @brief Unloads all pixel data for UI buttons from VRAM.
- */
 void CloseInteractive(Interactive* interactive){
+    // Unload all textures from VRAM
     UnloadTexture(interactive->new_game_button);
     UnloadTexture(interactive->continue_button);
     UnloadTexture(interactive->main_menu_button);

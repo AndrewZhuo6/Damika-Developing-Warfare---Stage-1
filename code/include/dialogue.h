@@ -5,7 +5,7 @@
  * Defines the structure for managing multi-line dialogue boxes and 
  * handles loading narrative text from external files.
  * 
- * Authors: Cornelius Jabez Lim
+ * Authors: Andrew Zhuo and Cornelius Jabez Lim
  */
 
 #ifndef DIALOGUE_H
@@ -48,12 +48,14 @@ typedef struct {
     char choice_responses[4][MAX_LINE_LENGTH];                // Follow-up text for each choice
     int choice_count;                                         // Number of available choices
     int selected_choice;                                      // Input from player
+    int choice_karma[4];                                      // Karma change from each choice
+    bool choice_ends[4];                                      // If choice response has [END]
 } Dialogue;
 
 /**
  * @brief Parses a text file into a Dialogue object.
  * 
- * @param filename FS path to the .txt dialogue source.
+ * @param filename Path to the .txt dialogue source.
  * @return Populated Dialogue struct. Empty struct if file load fails.
  */
 Dialogue LoadDialogue(const char* filename);
@@ -61,7 +63,7 @@ Dialogue LoadDialogue(const char* filename);
 /**
  * @brief Loads multiple randomized/once-only responses from a file.
  * 
- * @param filename FS path to the .txt response source.
+ * @param filename Path to the .txt response source.
  * @return Populated ResponseGroup struct. Empty struct if file load fails.
  */
 ResponseGroup LoadResponseGroup(const char* filename);
@@ -70,7 +72,7 @@ ResponseGroup LoadResponseGroup(const char* filename);
  * @brief Picks a response based on the random-choice and once-only rules.
  * 
  * @param group Pointer to the ResponseGroup object to pick a response from.
- * @param filename FS path to the .txt response source.
+ * @param filename Path to the .txt response source.
  * @return Returns a string pointer to the chosen response.
  */
 const char* PickResponse(ResponseGroup* group, const char* filename);
