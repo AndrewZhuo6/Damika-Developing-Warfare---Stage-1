@@ -151,11 +151,18 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
                 }
                 bool met = false;
                 if (context && npc_name[0]) {
+                    int current_day = 1;
+                    if (sscanf(context->story.day_folder, "day%d", &current_day) != 1) current_day = 1;
+
                     for (int m = 0; m < context->met_npc_count; m++) {
                         if (strstr(context->met_npcs[m], npc_name)) {
-                            if (context->met_npc_set[m] < context->story.current_set_idx || 
-                               (context->met_npc_set[m] == context->story.current_set_idx && context->met_npc_phase[m] < context->story.current_phase_idx)) {
+                            if (context->met_npc_day[m] < current_day) {
                                 met = true;
+                            } else if (context->met_npc_day[m] == current_day) {
+                                if (context->met_npc_set[m] < context->story.current_set_idx || 
+                                   (context->met_npc_set[m] == context->story.current_set_idx && context->met_npc_phase[m] < context->story.current_phase_idx)) {
+                                    met = true;
+                                }
                             }
                             break;
                         }
@@ -322,11 +329,18 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
                         
                         bool met = false;
                         if (context) {
+                            int current_day = 1;
+                            if (sscanf(context->story.day_folder, "day%d", &current_day) != 1) current_day = 1;
+
                             for (int m = 0; m < context->met_npc_count; m++) {
                                 if (strstr(context->met_npcs[m], target_npc)) { 
-                                    if (context->met_npc_set[m] < context->story.current_set_idx || 
-                                       (context->met_npc_set[m] == context->story.current_set_idx && context->met_npc_phase[m] < context->story.current_phase_idx)) {
+                                    if (context->met_npc_day[m] < current_day) {
                                         met = true;
+                                    } else if (context->met_npc_day[m] == current_day) {
+                                        if (context->met_npc_set[m] < context->story.current_set_idx || 
+                                           (context->met_npc_set[m] == context->story.current_set_idx && context->met_npc_phase[m] < context->story.current_phase_idx)) {
+                                            met = true;
+                                        }
                                     }
                                     break; 
                                 }

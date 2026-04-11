@@ -104,6 +104,7 @@ typedef struct GameContext {
     int picked_up_count;                // Number of unique items picked up
     
     char met_npcs[64][64];            // Registry of unique NPC IDs spoken to
+    int met_npc_day[64];              // Day index when met
     int met_npc_set[64];              // Set index when met
     int met_npc_phase[64];            // Phase index when met
     int met_npc_count;                // Number of NPCs spoken to

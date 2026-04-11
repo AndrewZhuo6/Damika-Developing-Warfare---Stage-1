@@ -561,8 +561,14 @@ static bool AllConditionsMet(StoryPhase* active, struct GameContext* game_contex
                 break;
         }
 
-        // If the condition is met, mark the corresponding quest as completed
-        if (cond->met && i < active->quest_count) {
+        // Quest completion is now handled explicitly via UpdateStoryConditions in interaction.c
+        // to support many-to-one condition-to-quest mappings.
+    }
+    
+    // Continuous quest marking for location/time-based conditions
+    for (int i = 0; i < active->condition_count && i < active->quest_count; i++) {
+        StoryCondition* cond = &active->end_conditions[i];
+        if (cond->met && (cond->type == CONDITION_ENTER_LOCATION || cond->type == CONDITION_TIME_PASS)) {
             active->quests[i].completed = true;
         }
     }

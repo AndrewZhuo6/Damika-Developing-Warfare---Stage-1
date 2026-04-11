@@ -60,6 +60,10 @@ static void RegisterMeetNPC(struct GameContext* game_context, const char* id){
     }
     if (game_context->met_npc_count < 64) {
         strncpy(game_context->met_npcs[game_context->met_npc_count], id, 63);
+        // Extract day number from day_folder (e.g., "day2" -> 2)
+        int day_num = 1;
+        if (sscanf(game_context->story.day_folder, "day%d", &day_num) != 1) day_num = 1;
+        game_context->met_npc_day[game_context->met_npc_count] = day_num;
         game_context->met_npc_set[game_context->met_npc_count] = game_context->story.current_set_idx;
         game_context->met_npc_phase[game_context->met_npc_count] = game_context->story.current_phase_idx;
         game_context->met_npc_count++;
@@ -147,39 +151,46 @@ static void UpdateStoryConditions(struct GameContext* game_context, Dialogue* ga
         }
     }
 
-    // Special case for SET5-PHASE2
-    if (strcmp(active->name, "SET5-PHASE2") == 0){
+    // Specialized and Generic Quest Mapping
+    if (strcmp(active->name, "SET5-PHASE2") == 0) {
         int small_collected = 0, big_collected = 0;
         int total_in_boxes = game_context->left_box_big + game_context->left_box_small + 
                              game_context->right_box_big + game_context->right_box_small;
 
-        // Count collected logs
-        for (int j = 0; j < game_context->picked_up_count; j++){
+        for (int j = 0; j < game_context->picked_up_count; j++) {
             if (strstr(game_context->picked_up_registry[j], "small_logs")) small_collected++;
             else if (strstr(game_context->picked_up_registry[j], "big_logs")) big_collected++;
         }
 
-        // Update conditions
-        if (active->condition_count >= 2){
+        if (active->condition_count >= 2) {
             active->end_conditions[0].current_count = small_collected;
             if (small_collected >= (int)active->end_conditions[0].target_value) active->end_conditions[0].met = true;
             active->end_conditions[1].current_count = big_collected;
             if (big_collected >= (int)active->end_conditions[1].target_value) active->end_conditions[1].met = true;
         }
 
-        // Update quests
-        if (active->quest_count > 0) active->quests[0].completed = (small_collected + big_collected >= 15);
-        if (active->quest_count > 1) active->quests[1].completed = (total_in_boxes >= 15);
+        // Quest 0: Pick up logs (Only done if BOTH types collected)
+        if (active->quest_count > 0) {
+            active->quests[0].completed = (active->end_conditions[0].met && active->end_conditions[1].met);
+        }
+        // Quest 1: Put them in boxes
+        if (active->quest_count > 1) {
+            active->quests[1].completed = (total_in_boxes >= 15);
+        }
 
-        // Update conditions
-        if (total_in_boxes >= 15 && active->condition_count >= 4){
+        if (total_in_boxes >= 15 && active->condition_count >= 4) {
              active->end_conditions[2].met = true;
              active->end_conditions[3].met = true;
         }
-    } else{
-        for (int i = 0; i < active->condition_count; i++){
-            // Update quests
-            if (active->end_conditions[i].met && i < active->quest_count) active->quests[i].completed = true;
+    } else if (strcmp(active->name, "SET2-PHASE2") == 0 && strcmp(game_context->story.day_folder, "day3") == 0) {
+        // Day 3 SET2-PHASE2 Specialized Mapping: Quest 0 (Mow grass) needs Condition 1 (Grass met)
+        if (active->condition_count >= 2 && active->quest_count >= 1) {
+            if (active->end_conditions[1].met) active->quests[0].completed = true;
+        }
+    } else {
+        // Generic 1:1 Mapping - fallback for simple phases
+        for (int i = 0; i < active->condition_count && i < active->quest_count; i++) {
+            if (active->end_conditions[i].met) active->quests[i].completed = true;
         }
     }
 }
