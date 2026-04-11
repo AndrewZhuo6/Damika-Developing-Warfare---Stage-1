@@ -78,6 +78,7 @@ typedef struct GameContext {
     int left_box_small;                 // Number of small boxes on the left
     int right_box_big;                  // Number of big boxes on the right
     int right_box_small;                // Number of small boxes on the right
+    float day3_mowing_timer;            // Timer for Day 3 mowing performance
 
     bool fireplace_on;                  // Tracks if the fireplace is burning (SET7)
     bool doors;                         // Tracks if INTERIOR doors are active/drawn
@@ -85,6 +86,8 @@ typedef struct GameContext {
     bool windows_locked;                // Nightly: windows locked state
     bool has_room_keys;                 // Nightly: player has room keys
     bool look_outside;                  // Nightly: looked outside before sleep
+    bool bear_trap_inside;              // Nightly: bear trap placed inside
+    bool bear_trap_outside;             // Nightly: bear trap placed outside
     char last_narration_action[32];     // Nightly: last choice made before bed
 
     // Dream Sequence State

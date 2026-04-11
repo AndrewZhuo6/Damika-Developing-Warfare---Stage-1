@@ -84,6 +84,17 @@ static AssetMetadata ASSET_REGISTRY[] = {
 
     // --- Farm Assets ---
     {"scarecrow", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"lawnmower", "../assets/map/map_farm/lawnmower.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass1", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass2", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass3", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass4", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass5", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass6", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass7", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass8", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass9", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"brown_grass10", "../assets/map/map_farm/brown_grass.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"small_logs1", "../assets/map/map_farm/small logs.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"small_logs2", "../assets/map/map_farm/small logs.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"small_logs3", "../assets/map/map_farm/small logs.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
@@ -229,11 +240,12 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context){
             }
             item->is_pickup = false; 
             item->no_collision = false;
-            if (strstr(meta->id, "logs") || strstr(meta->id, "garbage")) item->is_pickup = true;
+            if (strstr(meta->id, "logs") || strstr(meta->id, "garbage") || strcmp(meta->id, "lawnmower") == 0 || strstr(meta->id, "brown_grass")) item->is_pickup = true;
             
-            // Clue items should never block the player
+            // Clue items and brown grass should never block the player
             if (strcmp(meta->id, "rosary") == 0 || strcmp(meta->id, "feathers") == 0 || 
-                strcmp(meta->id, "pumpkin_piece") == 0 || strcmp(meta->id, "footsteps") == 0) {
+                strcmp(meta->id, "pumpkin_piece") == 0 || strcmp(meta->id, "footsteps") == 0 ||
+                strstr(meta->id, "brown_grass") != NULL) {
                 item->no_collision = true;
             }
             

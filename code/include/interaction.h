@@ -184,4 +184,11 @@ void InteractWithItem(
     struct GameContext *game_context
 );
 
+/**
+ * @brief Handles passive mowing collision with grass for Day 3.
+ * 
+ * @param game_context Pointer to the game context.
+ */
+void UpdateDay3Mowing(struct GameContext* game_context);
+
 #endif

@@ -171,6 +171,7 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
             // Update character if phone is not opened
             if (game_context->phone.state != PHONE_OPENED && game_context->phone.state != PHONE_SHOWING_REPLY){
                 UpdateCharacter(player, game_settings, map_size, game_map, game_audio, game_context->location, &game_context->story, game_context->worldItems, game_context->itemCount, game_context->worldNPCs, game_context->npcCount, game_context->worldDoors, game_context->doorCount, game_context->picked_up_registry, game_context->picked_up_count);
+                UpdateDay3Mowing(game_context);
             }
 
             // Update game context and story
@@ -301,6 +302,7 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         case NARRATION_CUTSCENE:
             // Keep story timer running for phone auto-advance during narration
             UpdateStory(game_context, GetFrameTime());
+            if (!game_context->story.narration_active) *game_state = GAMEPLAY;
             HideCursor();
             break;
         case PHOTO_CUTSCENE:

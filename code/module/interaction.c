@@ -133,7 +133,7 @@ static void UpdateStoryConditions(struct GameContext* game_context, Dialogue* ga
                 if ((int)cond->target_value == 0) cond->met = true;
                 else if (game_dialogue && game_dialogue->selected_choice == (int)cond->target_value - 1) cond->met = true;
             }
-        } else if (cond->type == CONDITION_COLLECT_OBJECTS){
+        } else if (cond->type == CONDITION_COLLECT_OBJECTS || cond->type == CONDITION_COLLIDE_OBJECTS){
             int collected = 0;
             for (int j = 0; j < game_context->picked_up_count; j++){
                 if (strstr(game_context->picked_up_registry[j], cond->target_id) != NULL){
@@ -410,6 +410,10 @@ void InteractWithItem(Item *item, Dialogue *game_dialogue, GameState *game_state
     }
     // If the item is a pickup item
     if (item->is_pickup){
+        if (strcmp(item->base.interactable_id, "lawnmower") == 0) {
+            StoryPhase* active = GetActivePhase(&game_context->story);
+            if (!active || strcmp(active->name, "SET2-PHASE2") != 0) return;
+        }
         strcpy(player->inventory[player->inventory_count], item->base.interactable_id);
         player->item_count[player->inventory_count] = 1; player->inventory_count++;
         item->picked_up = true; RegisterPickup(game_context, item->base.interactable_id);
@@ -513,6 +517,11 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[], in
     // Check for Items
     for (int i = 0; i < itemCount; i++) {
         if (!worldItems[i].picked_up && CheckCollisionRecs(playerHitbox, worldItems[i].base.bounds)) {
+            // Brown grass is handled passively, so don't show the "!" tooltip or allow manual interaction
+            if (strstr(worldItems[i].base.interactable_id, "brown_grass") != NULL) {
+                worldItems[i].base.isActive = false;
+                continue;
+            }
             worldItems[i].base.isActive = true;
             float dist = Vector2Distance(playerPos, (Vector2){worldItems[i].base.bounds.x, worldItems[i].base.bounds.y});
             if (dist < min_dist) { min_dist = dist; *objectToInteractWith = (Interactable*)&worldItems[i]; }
@@ -525,5 +534,70 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[], in
             float dist = Vector2Distance(playerPos, (Vector2){worldDoors[i].base.bounds.x, worldDoors[i].base.bounds.y});
             if (dist < min_dist) { min_dist = dist; *objectToInteractWith = (Interactable*)&worldDoors[i]; }
         } else worldDoors[i].base.isActive = false;
+    }
+}
+
+void UpdateDay3Mowing(struct GameContext* game_context) {
+    if (strcmp(game_context->story.day_folder, "day3") != 0) return;
+    
+    StoryPhase* active = GetActivePhase(&game_context->story);
+    if (!active || strcmp(active->name, "SET2-PHASE2") != 0) return;
+
+    // Check if player has the lawnmower
+    bool has_lawnmower = false;
+    for (int i = 0; i < game_context->picked_up_count; i++) {
+        if (strcmp(game_context->picked_up_registry[i], "lawnmower") == 0) {
+            has_lawnmower = true; 
+            break;
+        }
+    }
+    if (!has_lawnmower) return;
+    
+    // Find lawnmower item to get texture size
+    float mower_w = 64.0f;
+    float mower_h = 64.0f;
+    for (int i = 0; i < game_context->itemCount; i++) {
+        if (strcmp(game_context->worldItems[i].base.interactable_id, "lawnmower") == 0) {
+            if (game_context->worldItems[i].base.texture.id != 0) {
+                mower_w = (float)game_context->worldItems[i].base.texture.width;
+                mower_h = (float)game_context->worldItems[i].base.texture.height;
+            }
+            break;
+        }
+    }
+
+    // Compute lawnmower rect relative to player direction
+    Rectangle lawnmower_rect = {0, 0, mower_w, mower_h};
+    Character* player = game_context->player;
+    switch (player->direction) {
+        case 0: // down
+            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
+            lawnmower_rect.y = player->position.y + player->size.y; 
+            break; 
+        case 1: // left
+            lawnmower_rect.x = player->position.x - mower_w; 
+            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
+            break; 
+        case 2: // right
+            lawnmower_rect.x = player->position.x + player->size.x; 
+            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
+            break; 
+        case 3: // up
+            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
+            lawnmower_rect.y = player->position.y - mower_h; 
+            break; 
+    }
+    
+    // Check collision with un-mowed brown grass
+    for (int i = 0; i < game_context->itemCount; i++) {
+        Item* item = &game_context->worldItems[i];
+        if (!item->picked_up && strstr(item->base.interactable_id, "brown_grass") != NULL) {
+            if (CheckCollisionRecs(lawnmower_rect, item->base.bounds)) {
+                // Mow the grass (effectively "picking it up")
+                item->picked_up = true;
+                RegisterPickup(game_context, item->base.interactable_id);
+                UpdateStoryConditions(game_context, NULL, item->base.interactable_id);
+            }
+        }
     }
 }

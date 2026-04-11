@@ -385,6 +385,52 @@ void DrawGameplay(Scene* scene, Settings* game_settings, Interactive* game_inter
 
     DrawCharacter(player);
 
+    if (strcmp(game_context->story.day_folder, "day3") == 0) {
+        StoryPhase* active_phase = GetActivePhase(&game_context->story);
+        if (active_phase && strcmp(active_phase->name, "SET2-PHASE2") == 0) {
+            bool has_lawnmower = false;
+            Texture2D mower_texture = {0};
+            for (int i = 0; i < game_context->picked_up_count; i++) {
+                if (strcmp(game_context->picked_up_registry[i], "lawnmower") == 0) {
+                    has_lawnmower = true; break;
+                }
+            }
+            if (has_lawnmower) {
+                for (int i = 0; i < game_context->itemCount; i++) {
+                    if (strcmp(worldItems[i].base.interactable_id, "lawnmower") == 0) {
+                        mower_texture = worldItems[i].base.texture; break;
+                    }
+                }
+                if (mower_texture.id != 0) {
+                    float mower_w = (float)mower_texture.width;
+                    float mower_h = (float)mower_texture.height;
+                    Rectangle lawnmower_rect = {0, 0, mower_w, mower_h};
+                    switch (player->direction) {
+                        case 0: // down
+                            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
+                            lawnmower_rect.y = player->position.y + player->size.y; 
+                            break; 
+                        case 1: // left
+                            lawnmower_rect.x = player->position.x - mower_w; 
+                            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
+                            break; 
+                        case 2: // right
+                            lawnmower_rect.x = player->position.x + player->size.x; 
+                            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
+                            break; 
+                        case 3: // up
+                            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
+                            lawnmower_rect.y = player->position.y - mower_h; 
+                            break; 
+                    }
+                    DrawTexturePro(mower_texture, 
+                        (Rectangle){0, 0, (float)mower_texture.width, (float)mower_texture.height},
+                        lawnmower_rect, (Vector2){0, 0}, 0.0f, WHITE);
+                }
+            }
+        }
+    }
+
     // Draw interaction tooltips (on top of entities)
     for (int i = 0; i < game_context->npcCount; i++){
         if (worldNPCs[i].base.isActive) DrawText("!", worldNPCs[i].base.bounds.x + worldNPCs[i].base.bounds.width / 2, worldNPCs[i].base.bounds.y - 40, 50, YELLOW);

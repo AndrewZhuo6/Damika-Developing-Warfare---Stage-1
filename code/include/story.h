@@ -63,6 +63,7 @@ typedef enum StoryConditionType {
     CONDITION_TIME_PASS,              // Advance when time passes
     CONDITION_ENTER_LOCATION,         // Advance when entering a specific location
     CONDITION_COLLECT_OBJECTS,        // Advance when a number of unique objects are interacted with
+    CONDITION_COLLIDE_OBJECTS,        // Advance when a number of objects have been collided with (e.g. mowed grass)
     CONDITION_NARRATION_COMPLETE,     // Advance when all narration lines and choices are done
     CONDITION_PHONE_COMPLETE,         // Advance when the interactive phone dialogue finishes
     CONDITION_DREAM_COMPLETE,         // Advance when the dream text sequence finishes
@@ -118,6 +119,7 @@ typedef struct {
     bool state_value;        // Value to set
     bool is_break;           // Does this choice break the loop?
     bool completed;          // Has this choice been picked?
+    bool only_one;           // Part of an [ONLY_ONE] choice group
 } NarrationChoice;
 
 /**

@@ -101,6 +101,7 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
     int current_block_root = 0;
     bool skip_block = false;
     int skip_indent = -1;
+    bool chain_met = false;
 
     // Parse dialogue file
     while (fgets(raw_line, sizeof(raw_line), file)) {
@@ -121,10 +122,21 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
             }
             skip_block = !is_planted;
             skip_indent = line_indent;
+            chain_met = is_planted;
+            continue;
+        } else if (strstr(line, "[IF] TIME")) {
+            float limit = 0;
+            char op[4] = {0};
+            bool met = false;
+            if (sscanf(line, "[IF] TIME %s %f", op, &limit) == 2) {
+                if (strcmp(op, "<") == 0) met = (context->day3_mowing_timer < limit);
+                else if (strcmp(op, ">") == 0) met = (context->day3_mowing_timer > limit);
+            }
+            skip_block = !met;
+            skip_indent = line_indent;
+            chain_met = met;
             continue;
         } else if (strstr(line, "_TALKED")) {
-            // Generic NPC talked condition: [IF] SAUL_TALKED == FALSE
-            // Check if the player has met this NPC in a previous day/set/phase
             char* if_start = strstr(line, "[IF] ");
             if (if_start) {
                 char npc_name[64] = {0};
@@ -134,15 +146,9 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
                     if (name_len > 0 && name_len < 64) {
                         strncpy(npc_name, if_start + 5, name_len);
                         npc_name[name_len] = '\0';
-                        // Convert to lowercase for matching against met_npcs
-                        for (int i = 0; npc_name[i]; i++) {
-                            if (npc_name[i] >= 'A' && npc_name[i] <= 'Z')
-                                npc_name[i] += 32;
-                        }
+                        for (int i = 0; npc_name[i]; i++) if (npc_name[i] >= 'A' && npc_name[i] <= 'Z') npc_name[i] += 32;
                     }
                 }
-                // Use the same met_npc check as the choice visibility system:
-                // NPC must have been met in a previous set or phase
                 bool met = false;
                 if (context && npc_name[0]) {
                     for (int m = 0; m < context->met_npc_count; m++) {
@@ -159,11 +165,26 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
                 bool condition_met = expects_false ? !met : met;
                 skip_block = !condition_met;
                 skip_indent = line_indent;
+                chain_met = condition_met;
+            }
+            continue;
+        } else if (strstr(line, "[ELSE IF] TIME")) {
+            if (skip_indent != -1 && line_indent == skip_indent) {
+                if (chain_met) skip_block = true;
+                else {
+                    float limit = 0; char op[4] = {0}; bool met = false;
+                    if (sscanf(line, "[ELSE IF] TIME %s %f", op, &limit) == 2) {
+                        if (strcmp(op, "<") == 0) met = (context->day3_mowing_timer < limit);
+                        else if (strcmp(op, ">") == 0) met = (context->day3_mowing_timer > limit);
+                    }
+                    skip_block = !met;
+                    chain_met = met;
+                }
             }
             continue;
         } else if (strstr(line, "[ELSE]")) {
             if (skip_indent != -1 && line_indent == skip_indent) {
-                skip_block = !skip_block;
+                skip_block = chain_met;
             }
             continue;
         }

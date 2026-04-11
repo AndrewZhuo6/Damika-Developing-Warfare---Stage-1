@@ -281,6 +281,14 @@ void LoadStoryDay(StorySystem* story, const char* path) {
                                     current_choice = &phase_ptr->narration_choices[phase_ptr->narration_choice_count];
                                     char* label = strstr(trimmed, "[CHOICE]") + 8;
                                     while (*label == ' ') label++;
+                                    
+                                    current_choice->only_one = false;
+                                    if (strncmp(label, "[ONLY_ONE]", 10) == 0) {
+                                        current_choice->only_one = true;
+                                        label += 10;
+                                        while (*label == ' ') label++;
+                                    }
+                                    
                                     strncpy(current_choice->label, label, 63);
                                     current_choice->completed = false;
                                     phase_ptr->narration_choice_count++;
@@ -450,9 +458,16 @@ void LoadStoryDay(StorySystem* story, const char* path) {
                             else if (strcmp(loc_str, "FOREST") == 0) cond->target_value = (float)STORY_LOC_FOREST;
                             else if (strcmp(loc_str, "APARTMENT") == 0) cond->target_value = (float)STORY_LOC_APARTMENT;
                         }
-                    } else if (strcmp(type_str, "COLLECT_OBJECTS") == 0){
+                    } else if (strcmp(type_str, "COLLECT_OBJECTS") == 0 || strcmp(type_str, "COLLECT_OBJECT") == 0){
                         cond->type = CONDITION_COLLECT_OBJECTS;
-                        sscanf(line, "[CONDITION] COLLECT_OBJECTS %s %f", cond->target_id, &cond->target_value);
+                        if (sscanf(line, "[CONDITION] COLLECT_OBJECTS %s %f", cond->target_id, &cond->target_value) != 2) {
+                            sscanf(line, "[CONDITION] COLLECT_OBJECT %s %f", cond->target_id, &cond->target_value);
+                        }
+                    } else if (strcmp(type_str, "COLLIDE_OBJECTS") == 0 || strncmp(type_str, "COLLIDE_OBJECT", 14) == 0){
+                        cond->type = CONDITION_COLLIDE_OBJECTS;
+                        if (sscanf(line, "[CONDITION] COLLIDE_OBJECTS %s %f", cond->target_id, &cond->target_value) != 2) {
+                            sscanf(line, "[CONDITION] COLLIDE_OBJECT %s %f", cond->target_id, &cond->target_value);
+                        }
                     } else if (strcmp(type_str, "NARRATION_COMPLETE") == 0){
                         cond->type = CONDITION_NARRATION_COMPLETE;
                     } else if (strcmp(type_str, "PHONE_COMPLETE") == 0){
@@ -516,6 +531,7 @@ static bool AllConditionsMet(StoryPhase* active, struct GameContext* game_contex
             // For INTERACT and COLLECT, we rely on them being marked '.met = true' by interaction.c
             case CONDITION_INTERACT_OBJECT:
             case CONDITION_COLLECT_OBJECTS:
+            case CONDITION_COLLIDE_OBJECTS:
                 if (!cond->met) return false;
                 break;
 
@@ -575,6 +591,11 @@ void UpdateStory(struct GameContext* game_context, float delta){
 
     StoryPhase* active = GetActivePhase(story);
     if (!active) return;
+
+    // Day 3 Mowing Timer
+    if (strcmp(active->name, "SET2-PHASE2") == 0) {
+        game_context->day3_mowing_timer += delta;
+    }
 
     // Increment timer regardless, AllConditionsMet will check it if needed
     story->phase_timer += delta;
@@ -647,6 +668,11 @@ void AdvanceStory(struct GameContext* game_context){
     story->current_phase_idx++;
     story->phase_timer = 0;
 
+    StoryPhase* next = GetActivePhase(story);
+    if (next && strcmp(next->name, "SET2-PHASE2") == 0) {
+        game_context->day3_mowing_timer = 0;
+    }
+
     // Reset narration for new phase
     story->narration_active = false;
     story->narration_current_line = 0;
@@ -692,28 +718,11 @@ void AdvanceStory(struct GameContext* game_context){
         }
     }
     
-    StoryPhase* next = GetActivePhase(story);
+    next = GetActivePhase(story);
     if (next) {
         // Reset met flags for the new phase
         for (int i = 0; i < next->condition_count; i++) {
             next->end_conditions[i].met = false;
-        }
-
-        // Automatic map transition if the new phase has a different location
-        if (next->location != STORY_LOC_NONE && (int)next->location != (int)game_context->location) {
-            if (game_context->game_scene) {
-                game_context->game_scene->is_fading_out = true;
-                game_context->game_scene->fade_alpha = 0.0f;
-                game_context->game_scene->fade_color = BLACK;
-                
-                if (next->location == STORY_LOC_EXTERIOR) {
-                    strncpy(game_context->game_scene->pending_map, "../assets/map/map_ext/MAINMAP.json", 127);
-                    strncpy(game_context->game_scene->pending_loc, "EXTERIOR", 31);
-                } else if (next->location == STORY_LOC_APARTMENT) {
-                    strncpy(game_context->game_scene->pending_map, "../assets/map/map_int/MAINMAP.json", 127);
-                    strncpy(game_context->game_scene->pending_loc, "APARTMENT", 31);
-                }
-            }
         }
     }
 
@@ -730,6 +739,8 @@ void AdvanceStory(struct GameContext* game_context){
     }
 
     story->phone_pending = wants_interactive_phone;
+    if (next) LoadPhaseNarration(next, game_context);
+    
     if (!wants_interactive_phone && next && (next->narration_count > 0 || strcmp(next->name, "SET4-PHASE2") == 0) && (next->interactable_count == 0 || next->force_narration)) {
         // Mark narration as pending (will be activated after fade/camera settle)
         story->narration_pending = true;
@@ -754,6 +765,8 @@ static void ApplyStateMutation(struct GameContext* ctx, const char* key, bool va
     else if (strcmp(key, "windows_locked") == 0) { ctx->windows_locked = value; strcpy(ctx->last_narration_action, "WINDOW"); }
     else if (strcmp(key, "has_room_keys") == 0) { ctx->has_room_keys = value; strcpy(ctx->last_narration_action, "KEYS"); }
     else if (strcmp(key, "look_outside") == 0) { ctx->look_outside = value; strcpy(ctx->last_narration_action, "OUTSIDE"); }
+    else if (strcmp(key, "bear_trap_inside") == 0) { ctx->bear_trap_inside = value; strcpy(ctx->last_narration_action, "TRAP_INSIDE"); }
+    else if (strcmp(key, "bear_trap_outside") == 0) { ctx->bear_trap_outside = value; strcpy(ctx->last_narration_action, "TRAP_OUTSIDE"); }
     else if (strcmp(key, "doors") == 0) ctx->doors = value;
 }
 
@@ -805,6 +818,15 @@ void HandleNarrationInput(struct GameContext* game_context, int* game_state, str
             if (IsKeyPressed(KEY_ONE + i)) {
                 if (!active->narration_choices[i].completed) {
                     active->narration_choices[i].completed = true;
+                    
+                    // Handle [ONLY_ONE] exclusion
+                    if (active->narration_choices[i].only_one) {
+                        for (int j = 0; j < active->narration_choice_count; j++) {
+                            if (active->narration_choices[j].only_one && i != j) {
+                                active->narration_choices[j].completed = true;
+                            }
+                        }
+                    }
                     
                     if (active->narration_choices[i].is_break) {
                         story->narration_loop_broken = true;
@@ -896,6 +918,15 @@ static bool EvaluateCondition(struct GameContext* ctx, const char* cond) {
     if (strcmp(cond, "WINDOW_LAST") == 0) return strcmp(ctx->last_narration_action, "WINDOW") == 0;
     if (strcmp(cond, "FIREPLACE_LAST") == 0) return strcmp(ctx->last_narration_action, "FIREPLACE") == 0;
     if (strcmp(cond, "KEYS_LAST") == 0) return strcmp(ctx->last_narration_action, "KEYS") == 0;
+
+    // Day 3 SET4-PHASE2 Simplified Conditions
+    if (strcmp(cond, "MAIN_DOOR_LOCKED AND WINDOWS_LOCKED AND FIREPLACE_ON AND BEAR_TRAP_OUTSIDE") == 0)
+        return ctx->main_door_locked && ctx->windows_locked && ctx->fireplace_on && ctx->bear_trap_outside;
+    if (strcmp(cond, "MAIN_DOOR_LOCKED AND WINDOWS_LOCKED AND FIREPLACE_ON AND BEAR_TRAP_INSIDE") == 0)
+        return ctx->main_door_locked && ctx->windows_locked && ctx->fireplace_on && ctx->bear_trap_inside;
+    if (strcmp(cond, "BEAR_TRAP_INSIDE") == 0) return ctx->bear_trap_inside;
+    if (strcmp(cond, "BEAR_TRAP_OUTSIDE") == 0) return ctx->bear_trap_outside;
+
     return false;
 }
 
@@ -914,6 +945,7 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
     if (!file) return;
 
     phase->narration_count = 0;
+    phase->phone_message_count = 0;
     
     char line[256];
     
@@ -921,7 +953,7 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
     bool branch_satisfied[10];
     for (int i = 0; i < 10; i++) {
         execute_branch[i] = true;
-        branch_satisfied[i] = true;
+        branch_satisfied[i] = false;
     }
     
     while (fgets(line, sizeof(line), file)) {
@@ -932,8 +964,14 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
         int level = indent / 4;
         if (level > 9) level = 9;
         
-        // Ensure we are active at parent level
-        bool parent_active = (level == 0) ? true : execute_branch[level - 1];
+        // Ensure we are active at all parent levels
+        bool parent_active = true;
+        for (int i = 0; i < level; i++) {
+            if (!execute_branch[i]) {
+                parent_active = false;
+                break;
+            }
+        }
         
         char trimmed[256];
         char* start = line + indent;
@@ -1015,6 +1053,25 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
                     phase->narration_lines[phase->narration_count].sanity_change = points;
                     phase->narration_count++;
                 }
+            }
+        } else if (strncmp(trimmed, "[PHONE]", 7) == 0) {
+            char* sender = trimmed + 7;
+            while (*sender == ' ') sender++;
+            strncpy(phase->phone_sender, sender, 63);
+            if (phase->narration_count < 40) {
+                strncpy(phase->narration_lines[phase->narration_count].text, "PHONE_START", 255);
+                phase->narration_lines[phase->narration_count].type = 3; // phone_start
+                phase->narration_lines[phase->narration_count].sanity_change = 0;
+                phase->narration_count++;
+            }
+        } else if (strncmp(trimmed, "[MESSAGE]", 9) == 0) {
+            char* msg = trimmed + 9;
+            while (*msg == ' ') msg++;
+            if (phase->phone_message_count < 32) {
+                strncpy(phase->phone_messages[phase->phone_message_count].text, msg, 127);
+                ReplaceNewlines(phase->phone_messages[phase->phone_message_count].text);
+                phase->phone_messages[phase->phone_message_count].choice_count = 0;
+                phase->phone_message_count++;
             }
         }
     }
