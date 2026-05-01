@@ -147,7 +147,7 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
             UpdateInteractive(game_interactive, game_settings);
             if (game_interactive->is_new_game_clicked){
                 ResetGameData(game_context, game_map->spawn_position);
-                LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt");
+                LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt", game_context);
                 *game_state = GAMEPLAY;
                 game_interactive->is_new_game_clicked = false;
                 StopMusicStream(game_audio->bg_music);

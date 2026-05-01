@@ -117,7 +117,7 @@ static void ReplaceNewlines(char* str) {
     *dst = '\0';
 }
 
-void LoadStoryDay(StorySystem* story, const char* path) {
+void LoadStoryDay(StorySystem* story, const char* path, struct GameContext* game_context) {
     FILE* file = fopen(path, "r");
 
     memset(story, 0, sizeof(StorySystem));
@@ -489,9 +489,35 @@ void LoadStoryDay(StorySystem* story, const char* path) {
             // Treat as a quest description
             if (phase->quest_count < MAX_QUESTS_PER_PHASE){
                 const char* desc = strstr(line, "[QUEST] ") ? (line + 8) : line;
-                strncpy(phase->quests[phase->quest_count].description, desc, 63);
-                phase->quests[phase->quest_count].completed = false;
-                phase->quest_count++;
+                char desc_buffer[128];
+                strncpy(desc_buffer, desc, 127);
+                desc_buffer[127] = '\0';
+                
+                bool condition_met = true;
+                char* cond_delimiter = strstr(desc_buffer, " | ");
+                if (cond_delimiter) {
+                    *cond_delimiter = '\0'; // Truncate the description to remove the condition string
+                    if (game_context) {
+                        const char* condition_str = cond_delimiter + 3;
+                        if (strstr(condition_str, "SAUL_TALKED == TRUE on day1 and SAUL_TALKED == TRUE on day >= 2")) {
+                            bool met_day1 = false;
+                            bool met_day2_plus = false;
+                            for (int m = 0; m < game_context->met_npc_count; m++) {
+                                if (strcmp(game_context->met_npcs[m], "saul") == 0) {
+                                    if (game_context->met_npc_day[m] == 1) met_day1 = true;
+                                    if (game_context->met_npc_day[m] >= 2) met_day2_plus = true;
+                                }
+                            }
+                            condition_met = (met_day1 && met_day2_plus);
+                        }
+                    }
+                }
+                
+                if (condition_met) {
+                    strncpy(phase->quests[phase->quest_count].description, desc_buffer, 63);
+                    phase->quests[phase->quest_count].completed = false;
+                    phase->quest_count++;
+                }
             }
         }
     }
@@ -722,7 +748,7 @@ void AdvanceStory(struct GameContext* game_context){
                 snprintf(next_day_path, sizeof(next_day_path), "../assets/text/day%d/day%d.txt", current_day + 1, current_day + 1);
                 
                 if (FileExists(next_day_path)) {
-                    LoadStoryDay(story, next_day_path);
+                    LoadStoryDay(story, next_day_path, game_context);
                     // LoadStoryDay resets current_set_idx and current_phase_idx to 0
                     // which is what we want for the new day
                 } else {

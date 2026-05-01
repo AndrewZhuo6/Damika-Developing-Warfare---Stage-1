@@ -61,11 +61,28 @@ void ApplyData(struct GameContext* context, Settings* game_settings, Data* data)
     }
     player->inventory_count = data->inventory_count;
 
-    // 2. Restore Story State
+    // 2. Restore World State (Must happen before loading story for conditional quests)
+    context->picked_up_count = data->picked_up_count;
+    for (int i = 0; i < data->picked_up_count && i < 512; i++){
+        strncpy(context->picked_up_registry[i], data->picked_up_registry[i], 63);
+    }
+    for (int i = 0; i < 18; i++) context->pot_registry[i] = data->pot_registry[i];
+    for (int i = 0; i < data->used_lines_count && i < 256; i++) {
+        context->dialogue_used_lines[i] = data->dialogue_used_lines[i];
+    }
+    context->met_npc_count = data->met_npc_count;
+    for (int i = 0; i < data->met_npc_count && i < 64; i++) {
+        strncpy(context->met_npcs[i], data->met_npcs[i], 63);
+        context->met_npc_day[i] = data->met_npc_day[i];
+        context->met_npc_set[i] = data->met_npc_set[i];
+        context->met_npc_phase[i] = data->met_npc_phase[i];
+    }
+
+    // 3. Restore Story State
     if (strlen(data->day_folder) > 0) {
         char path[128];
         sprintf(path, "../assets/text/%s/%s.txt", data->day_folder, data->day_folder);
-        LoadStoryDay(&context->story, path);
+        LoadStoryDay(&context->story, path, context);
         context->story.current_set_idx = data->set_idx;
         context->story.current_phase_idx = data->phase_idx;
         context->location = (Location)data->location;
@@ -85,23 +102,6 @@ void ApplyData(struct GameContext* context, Settings* game_settings, Data* data)
             // Synchronize world assets for the restored map/phase
             LoadPhaseAssets(active, context);
         }
-    }
-
-    // 3. Restore World State
-    context->picked_up_count = data->picked_up_count;
-    for (int i = 0; i < data->picked_up_count && i < 512; i++){
-        strncpy(context->picked_up_registry[i], data->picked_up_registry[i], 63);
-    }
-    for (int i = 0; i < 18; i++) context->pot_registry[i] = data->pot_registry[i];
-    for (int i = 0; i < data->used_lines_count && i < 256; i++) {
-        context->dialogue_used_lines[i] = data->dialogue_used_lines[i];
-    }
-    context->met_npc_count = data->met_npc_count;
-    for (int i = 0; i < data->met_npc_count && i < 64; i++) {
-        strncpy(context->met_npcs[i], data->met_npcs[i], 63);
-        context->met_npc_day[i] = data->met_npc_day[i];
-        context->met_npc_set[i] = data->met_npc_set[i];
-        context->met_npc_phase[i] = data->met_npc_phase[i];
     }
 
     // 4. Restore Karma

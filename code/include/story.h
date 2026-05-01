@@ -209,7 +209,7 @@ typedef struct StorySystem {
  * @param story Pointer to the StorySystem to populate.
  * @param path Path to the Day text file.
  */
-void LoadStoryDay(StorySystem* story, const char* path);
+void LoadStoryDay(StorySystem* story, const char* path, struct GameContext* game_context);
 
 /**
  * @brief Checks phase progression every frame.

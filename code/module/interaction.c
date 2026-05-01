@@ -55,14 +55,15 @@ static void RegisterPickup(struct GameContext* game_context, const char* id){
  * @param id NPC ID to register.
  */
 static void RegisterMeetNPC(struct GameContext* game_context, const char* id){
+    // Extract day number from day_folder (e.g., "day2" -> 2)
+    int day_num = 1;
+    if (sscanf(game_context->story.day_folder, "day%d", &day_num) != 1) day_num = 1;
+
     for (int i = 0; i < game_context->met_npc_count; i++) {
-        if (strcmp(game_context->met_npcs[i], id) == 0) return;
+        if (strcmp(game_context->met_npcs[i], id) == 0 && game_context->met_npc_day[i] == day_num) return;
     }
     if (game_context->met_npc_count < 64) {
         strncpy(game_context->met_npcs[game_context->met_npc_count], id, 63);
-        // Extract day number from day_folder (e.g., "day2" -> 2)
-        int day_num = 1;
-        if (sscanf(game_context->story.day_folder, "day%d", &day_num) != 1) day_num = 1;
         game_context->met_npc_day[game_context->met_npc_count] = day_num;
         game_context->met_npc_set[game_context->met_npc_count] = game_context->story.current_set_idx;
         game_context->met_npc_phase[game_context->met_npc_count] = game_context->story.current_phase_idx;

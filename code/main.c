@@ -71,7 +71,7 @@ int main(void){
     game_context->game_scene = &game_scene;
     game_context->game_dialogue = game_dialogue;
     
-    LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt");
+    LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt", game_context);
     StoryPhase* initial = GetActivePhase(&game_context->story);
     LoadPhaseAssets(initial, game_context);
     
