@@ -56,7 +56,7 @@ static AssetMetadata ASSET_REGISTRY[] = {
     {"big tree", "", {1500, 1000, 192, 256}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/big tree.txt", 0},
     {"tree", "", {1000, 1100, 96, 128}, INTERACTABLE_TYPE_ITEM, "../assets/text/day1/phase2/tree.txt", 0},
     {"farmer", "../assets/images/character/jhonny/jhonny_idle.png", {1600, 1200, 64, 96}, INTERACTABLE_TYPE_NPC, "", 0},
-    {"saul", "../assets/images/character/furina.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_NPC, "", 0},
+    {"saul", "../assets/images/character/saul/saul.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_NPC, "", 0},
     {"house", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"house_door", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_DOOR, "", 0},
     {"farm_road", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_DOOR, "../assets/text/day1/set4/phase1/farm_road.txt", 0},
