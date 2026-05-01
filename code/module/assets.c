@@ -146,12 +146,6 @@ static AssetMetadata* FindInRegistry(const char* id){
     return NULL;
 }
 
-void PrintAssetsKarma(){
-    // Print the karma of the asset
-    TraceLog(LOG_WARNING,"%s: %d\n", ASSET_REGISTRY[15].id, ASSET_REGISTRY[15].karma);
-    TraceLog(LOG_WARNING,"%s: %d\n", ASSET_REGISTRY[14].id, ASSET_REGISTRY[14].karma);
-}
-
 void UpdateAssetKarma(const char* id, int delta){
     // Update the karma of the asset
     AssetMetadata* meta = FindInRegistry(id);

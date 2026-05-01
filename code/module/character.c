@@ -169,11 +169,17 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
     }
 
     // Update animation frame
-    character->frame_counter++;
-    if (character->frame_counter >= (60 / character->frame_speed)){
+    if (is_moving) {
+        character->frame_counter++;
+        if (character->frame_counter >= (60 / character->frame_speed)){
+            character->frame_counter = 0;
+            character->current_frame++;
+            if (character->current_frame >= character->frame_number) character->current_frame = 0;
+        }
+    } else{
+        if (character->direction == 1) character->current_frame = 1;
+        else character->current_frame = 0;
         character->frame_counter = 0;
-        character->current_frame++;
-        if (character->current_frame >= character->frame_number) character->current_frame = 0;
     }
 
     // Calculate frame rectangle for sprite animation

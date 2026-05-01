@@ -22,7 +22,6 @@
  */
 void LoadPhaseAssets(StoryPhase* phase, GameContext* context);
 
-void PrintAssetsKarma();
 /**
  * @brief Unloads assets for a specific location.
  * 

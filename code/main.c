@@ -177,7 +177,6 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         DrawGame(game_scene, game_settings, game_interactive, game_map, player,
             game_dialogue, game_context, game_state, game_context->worldNPCs,
             game_context->worldItems);
-        PrintAssetsKarma();
     }
 }
 
