@@ -64,6 +64,8 @@ void UpdateInteractiveLayout(Interactive* interactive, int game_state, Settings*
         } else{
             // Centered New Game button reference (370 x, 290 y, 460 w, 120 h)
             interactive->new_game_bounds = (Rectangle){370 * scale_x, 290 * scale_y, 460 * scale_x, 120 * scale_y};
+            // Clear continue bounds so it cannot be hovered or clicked
+            interactive->continue_bounds = (Rectangle){0, 0, 0, 0};
         }
         interactive->settings_bounds = (Rectangle){370 * scale_x, 440 * scale_y, 460 * scale_x, 120 * scale_y};
         interactive->quit_bounds = (Rectangle){370 * scale_x, 590 * scale_y, 460 * scale_x, 120 * scale_y};
