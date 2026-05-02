@@ -202,6 +202,9 @@ typedef struct StorySystem {
     int ending_current_line;                // Currently displayed line index
     float ending_typing_timer;              // Typing effect timer
     int ending_typing_index;                // Typing effect character index
+    char ending_credits_lines[128][128];    // Parsed credit text lines
+    int ending_credits_line_count;          // Total credit lines
+    float ending_credits_y;                 // Current Y position for scrolling
 } StorySystem;
 
 /**

@@ -1340,6 +1340,26 @@ void HandleEndingInput(struct GameContext* game_context, int* game_state, struct
             // If past last line, show credits
             if (story->ending_current_line >= story->ending_line_count) {
                 story->ending_show_credits = true;
+                
+                // Initialize credits
+                story->ending_credits_line_count = 0;
+                FILE* f = fopen("../assets/text/day4/credit.txt", "r");
+                if (f) {
+                    char cline[128];
+                    while (fgets(cline, sizeof(cline), f) && story->ending_credits_line_count < 128) {
+                        char* end = cline + strlen(cline) - 1;
+                        while (end >= cline && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+                        strncpy(story->ending_credits_lines[story->ending_credits_line_count], cline, 127);
+                        story->ending_credits_line_count++;
+                    }
+                    fclose(f);
+                }
+                story->ending_credits_y = (float)GetScreenHeight();
+                
+                if (game_audio) {
+                    StopMusicStream(game_audio->bg_music);
+                    PlayMusicStream(game_audio->credit_music);
+                }
             }
         }
     }

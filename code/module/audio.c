@@ -42,6 +42,7 @@ Audio InitAudio(Settings* game_settings){
 
     // 3. Load music streams (streamed from disk to save memory)
     new_audio.bg_music = LoadMusicStream("../assets/audios/bg_music.ogg");
+    new_audio.credit_music = LoadMusicStream("../assets/audios/credit.mp3");
 
     // 4. Load static sounds (loaded fully into RAM for low latency)
     new_audio.step_outdoor = LoadSound("../assets/audios/step_outdoor.mp3");
@@ -60,11 +61,13 @@ Audio InitAudio(Settings* game_settings){
 
 void UpdateAudio(Audio* audio){
     UpdateMusicStream(audio->bg_music);
+    UpdateMusicStream(audio->credit_music);
 }
 
 void CloseAudio(Audio* audio){
     // Unload all loaded resources from memory
     UnloadMusicStream(audio->bg_music);
+    UnloadMusicStream(audio->credit_music);
     UnloadSound(audio->step_outdoor);
     UnloadSound(audio->step_indoor);
     UnloadSound(audio->notif_sound);

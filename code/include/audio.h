@@ -43,6 +43,7 @@ typedef struct Audio {
     Sound window_scraping;      // Window scraping sound
     Sound chimney_rustling;     // Chimney rustling sound
     Sound typing_sound;         // Typing text effect sound
+    Music credit_music;         // Special credit music
 } Audio;
 
 /**

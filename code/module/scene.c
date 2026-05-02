@@ -353,14 +353,48 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
         
         if (game_context->story.ending_show_credits) {
-            // Credits screen
-            const char* thanks = "Thank You for Playing";
-            const char* team = "Potato";
-            int thanks_w = MeasureText(thanks, 30);
-            int team_w = MeasureText(team, 24);
-            DrawText(thanks, GetScreenWidth() / 2 - thanks_w / 2, GetScreenHeight() / 2 - 40, 30, WHITE);
-            DrawText(team, GetScreenWidth() / 2 - team_w / 2, GetScreenHeight() / 2 + 10, 24, GOLD);
-            DrawText("Press 'SPACE' to continue", GetScreenWidth() / 2 - MeasureText("Press 'SPACE' to continue", 16) / 2, GetScreenHeight() / 2 + 60, 16, GRAY);
+            // Scrolling Credits screen
+            game_context->story.ending_credits_y -= 40.0f * GetFrameTime();
+            
+            bool next_is_role = true;
+            for (int i = 0; i < game_context->story.ending_credits_line_count; i++) {
+                const char* line = game_context->story.ending_credits_lines[i];
+                float line_y = game_context->story.ending_credits_y + (i * 30.0f);
+                
+                if (strlen(line) == 0) {
+                    next_is_role = true;
+                    continue;
+                }
+                
+                // Only draw if within screen bounds (plus some margin)
+                if (line_y > -50 && line_y < GetScreenHeight() + 50) {
+                    int w = MeasureText(line, 24);
+                    Color c = next_is_role ? GOLD : WHITE;
+                    next_is_role = false; // After the first line (role), subsequent lines are names
+                    
+                    // Specific hardcoded checks for title and ending
+                    if (strcmp(line, "AISLING") == 0 || strcmp(line, "THE END") == 0 || strcmp(line, "THANK YOU FOR PLAYING") == 0) {
+                        c = WHITE;
+                        w = MeasureText(line, 30);
+                        DrawText(line, GetScreenWidth() / 2 - w / 2, line_y, 30, c);
+                        next_is_role = true; // reset so the next actual block starts with GOLD
+                    } else {
+                        DrawText(line, GetScreenWidth() / 2 - w / 2, line_y, 24, c);
+                    }
+                } else {
+                    // Even if offscreen, we must update the state machine
+                    if (strcmp(line, "AISLING") == 0 || strcmp(line, "THE END") == 0 || strcmp(line, "THANK YOU FOR PLAYING") == 0) {
+                        next_is_role = true;
+                    } else {
+                        next_is_role = false;
+                    }
+                }
+            }
+            
+            float last_line_y = game_context->story.ending_credits_y + (game_context->story.ending_credits_line_count * 30.0f);
+            if (last_line_y < -50.0f) {
+                DrawText("Press 'SPACE' to continue", GetScreenWidth() / 2 - MeasureText("Press 'SPACE' to continue", 16) / 2, GetScreenHeight() / 2 + 60, 16, GRAY);
+            }
         } else if (game_context->story.ending_current_line < game_context->story.ending_line_count) {
             // Parse "Speaker: text" format
             const char* full_line = game_context->story.ending_lines[game_context->story.ending_current_line];
