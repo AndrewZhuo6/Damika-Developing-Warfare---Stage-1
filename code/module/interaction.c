@@ -121,7 +121,7 @@ static void UpdateStoryConditions(struct GameContext* game_context, Dialogue* ga
     StoryPhase* active = GetActivePhase(&game_context->story);
     if (!active) return;
 
-    if (strcmp(active->name, "SET1-PHASE1") == 0){
+    if (strcmp(active->name, "SET1-PHASE1") == 0 && strcmp(game_context->story.day_folder, "day1") == 0){
         if (interactable_id && strlen(interactable_id) > 0){
             if (active->quest_count > 1) active->quests[1].completed = true;
         }

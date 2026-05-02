@@ -90,7 +90,7 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
 
     // Handle story-specific movement logic
     StoryPhase* active = GetActivePhase(story);
-    if (active && strcmp(active->name, "SET1-PHASE1") == 0){
+    if (active && strcmp(active->name, "SET1-PHASE1") == 0 && strcmp(story->day_folder, "day1") == 0){
         static bool w = false, a = false, s = false, d = false;
         if (IsKeyDown(KEY_W)) w = true;
         if (IsKeyDown(KEY_A)) a = true;
