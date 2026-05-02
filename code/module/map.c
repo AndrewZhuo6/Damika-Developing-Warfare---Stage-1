@@ -96,6 +96,36 @@ void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_
 
                 if (tileset && tileset_idx < map->tileset_count){
                     int id = gid - tileset->firstgid;
+                    
+                    // Check for tile animation
+                    cute_tiled_tile_descriptor_t* tile_desc = tileset->tiles;
+                    while (tile_desc) {
+                        if (tile_desc->tile_index == id) {
+                            if (tile_desc->frame_count > 0 && tile_desc->animation) {
+                                // Calculate total duration
+                                int total_duration = 0;
+                                for (int f = 0; f < tile_desc->frame_count; f++) {
+                                    total_duration += tile_desc->animation[f].duration;
+                                }
+                                if (total_duration > 0) {
+                                    // Calculate current time in ms
+                                    int current_time = (int)(GetTime() * 1000.0);
+                                    int time_in_anim = current_time % total_duration;
+                                    
+                                    // Find current frame
+                                    for (int f = 0; f < tile_desc->frame_count; f++) {
+                                        if (time_in_anim < tile_desc->animation[f].duration) {
+                                            id = tile_desc->animation[f].tileid;
+                                            break;
+                                        }
+                                        time_in_anim -= tile_desc->animation[f].duration;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        tile_desc = tile_desc->next;
+                    }
                     int tx = (id % tileset->columns) * tileset->tilewidth;
                     int ty = (id / tileset->columns) * tileset->tileheight;
                     int x = i % layer->width;
