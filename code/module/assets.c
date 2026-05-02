@@ -134,6 +134,11 @@ static AssetMetadata ASSET_REGISTRY[] = {
     {"feathers", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"rosary", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
     {"pumpkin_piece", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+
+    // --- Forest Assets ---
+    {"giant_tree", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"campfire", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
+    {"tent", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
 };
 
 static int REGISTRY_COUNT = sizeof(ASSET_REGISTRY) / sizeof(ASSET_REGISTRY[0]);

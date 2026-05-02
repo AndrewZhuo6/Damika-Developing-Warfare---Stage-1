@@ -48,7 +48,7 @@ Map InitMap(const char* path, const char* spawn_id){
     return map;
 }
 
-void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx){
+void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx, bool bear_trap_inside){
     if (!map || !map->tiled_map) return;
     cute_tiled_layer_t* layer = map->tiled_map->layers;
     while (layer){
@@ -58,6 +58,10 @@ void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_
                 continue;
             }
             if (!doors && layer->name.ptr && strcmp(layer->name.ptr, "doors") == 0) {
+                layer = layer->next;
+                continue;
+            }
+            if (!bear_trap_inside && layer->name.ptr && strcmp(layer->name.ptr, "bear_trap") == 0) {
                 layer = layer->next;
                 continue;
             }

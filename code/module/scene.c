@@ -465,7 +465,7 @@ void DrawGameplay(Scene* scene, Settings* game_settings, Interactive* game_inter
     // Draw gameplay
     BeginMode2D(game_context->camera);
     bool day2_active = (strcmp(game_context->story.day_folder, "day2") == 0);
-    DrawMap(game_map, game_context->fireplace_on, game_context->main_door_locked, day2_active, game_context->story.current_set_idx);
+    DrawMap(game_map, game_context->fireplace_on, game_context->main_door_locked, day2_active, game_context->story.current_set_idx, game_context->bear_trap_inside);
 
     // Draw world items (Only pickable ones)
     for (int i = 0; i < game_context->itemCount; i++) {
