@@ -393,7 +393,7 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
             
             float last_line_y = game_context->story.ending_credits_y + (game_context->story.ending_credits_line_count * 30.0f);
             if (last_line_y < -50.0f) {
-                DrawText("Press 'SPACE' to continue", GetScreenWidth() / 2 - MeasureText("Press 'SPACE' to continue", 16) / 2, GetScreenHeight() / 2 + 60, 16, GRAY);
+                DrawText("Press 'SPACE' to continue", GetScreenWidth() / 2 - MeasureText("Press 'SPACE' to continue", 20) / 2, GetScreenHeight() / 2 + 60, 20, GRAY);
             }
         } else if (game_context->story.ending_current_line < game_context->story.ending_line_count) {
             // Parse "Speaker: text" format

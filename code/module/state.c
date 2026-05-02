@@ -95,6 +95,12 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
             game_context->game_dialogue->pending_target_map[0] = '\0';
         }
     }
+    
+    // Refresh UI layout when entering main menu (e.g. after credits when data is deleted)
+    if (last_state != *game_state && *game_state == MAINMENU) {
+        UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
+    }
+    
     last_state = *game_state;
 
     // Map transition trigger at peak of fade

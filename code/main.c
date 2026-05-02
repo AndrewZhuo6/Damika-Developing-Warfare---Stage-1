@@ -50,7 +50,7 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
              GameContext *game_context, GameState *game_state);
 void EndGame(Audio *game_audio, Character *player, Scene *game_scene,
              Interactive *game_interactive, Map *game_map,
-             Settings *game_settings, GameContext *game_context);
+             Settings *game_settings, GameContext *game_context, GameState game_state);
 
 int main(void){
     Settings game_settings = InitSettings();
@@ -80,7 +80,7 @@ int main(void){
     RunGame(&player, &game_audio, &game_settings, &game_scene, &game_interactive,
             game_dialogue, &game_map, game_context, &game_state);
     
-    EndGame(&game_audio, &player, &game_scene, &game_interactive, &game_map, &game_settings, game_context);
+    EndGame(&game_audio, &player, &game_scene, &game_interactive, &game_map, &game_settings, game_context, game_state);
     free(game_context);
     
     return 0;
@@ -177,15 +177,16 @@ void RunGame(Character *player, Audio *game_audio, Settings *game_settings,
         DrawGame(game_scene, game_settings, game_interactive, game_map, player,
             game_dialogue, game_context, game_state, game_context->worldNPCs,
             game_context->worldItems);
-        TraceLog(LOG_WARNING, "%f", player->sanity);
     }
 }
 
 void EndGame(Audio *game_audio, Character *player, Scene *game_scene,
              Interactive *game_interactive, Map *game_map,
-             Settings *game_settings, GameContext *game_context){
-    // Save data
-    SaveData(game_context, game_settings);
+             Settings *game_settings, GameContext *game_context, GameState game_state){
+    // Save data only if not in MAINMENU
+    if (game_state != MAINMENU) {
+        SaveData(game_context, game_settings);
+    }
     // Close audio
     CloseAudio(game_audio);
     // Close character

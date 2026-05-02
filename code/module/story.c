@@ -1296,10 +1296,15 @@ void HandleEndingInput(struct GameContext* game_context, int* game_state, struct
     
     // Credits screen — SPACE returns to main menu
     if (story->ending_show_credits) {
-        if (IsKeyPressed(KEY_SPACE)) {
+        float last_line_y = story->ending_credits_y + (story->ending_credits_line_count * 30.0f);
+        if (last_line_y < -50.0f && IsKeyPressed(KEY_SPACE)) {
             story->ending_active = false;
             story->ending_show_credits = false;
             DeleteSaveData();
+            if (game_audio) {
+                StopMusicStream(game_audio->credit_music);
+                PlayMusicStream(game_audio->bg_music);
+            }
             *game_state = MAINMENU;
         }
         return;

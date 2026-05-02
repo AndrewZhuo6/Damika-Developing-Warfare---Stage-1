@@ -224,6 +224,5 @@ void HandleGameData(struct GameContext* context, Map* game_map, Settings* game_s
 void DeleteSaveData(void){
     if (FileExists("../data/data.dat")){
         remove("../data/data.dat");
-        TraceLog(LOG_INFO, "SAVE DATA DELETED");
     }
 }
