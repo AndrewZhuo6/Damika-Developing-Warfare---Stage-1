@@ -62,6 +62,7 @@ typedef struct Character {
     int current_frame;                   // Index of current animation frame
     int frame_counter;                   // Counter for frame speed logic
     int frame_speed;                     // Animation play speed
+    bool can_move;                       // If false, movement inputs are ignored (cutscenes)
 
     // --- Gameplay Mechanics ---
     float stamina;                       // Current energy for running

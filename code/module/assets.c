@@ -81,6 +81,7 @@ static AssetMetadata ASSET_REGISTRY[] = {
     {"house_door", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_DOOR, "", 0},
     {"farm_road", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_DOOR, "../assets/text/day1/set4/phase1/farm_road.txt", 0},
     {"forest_road", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_DOOR, "../assets/text/day1/set4/phase1/forest_road.txt", 0},
+    {"mike", "../assets/images/character/mike/mike_down.png", {0, 0, 0, 0}, INTERACTABLE_TYPE_NPC, "", 0},
 
     // --- Interior Assets ---
     {"fireplace", "", {0, 0, 0, 0}, INTERACTABLE_TYPE_ITEM, "", 0},
@@ -329,6 +330,21 @@ void LoadPhaseAssets(StoryPhase* phase, GameContext* context){
         }
     }
 
+    // Mike Special Loading for Day 3
+    if (strcmp(context->story.day_folder, "day3") == 0 && context->story.current_set_idx == 0 && context->story.current_phase_idx == 0) {
+        if (context->mike_down_tex.id == 0) {
+            context->mike_down_tex = LoadTexture("../assets/images/character/mike/mike_down.png");
+            // Find Mike position and size from map
+            for (int i = 0; i < context->npcCount; i++) {
+                if (strcmp(context->worldNPCs[i].base.interactable_id, "mike") == 0) {
+                    context->mike_pos = (Vector2){context->worldNPCs[i].base.bounds.x, context->worldNPCs[i].base.bounds.y};
+                    context->mike_size = (Vector2){context->worldNPCs[i].base.bounds.width, context->worldNPCs[i].base.bounds.height};
+                    break;
+                }
+            }
+        }
+    }
+
     LoadNPCs(context->worldNPCs, context->npcCount);
     LoadItems(context->worldItems, context->itemCount);
     
@@ -354,6 +370,12 @@ void UnloadLocationAssets(GameContext* context){
         context->worldItems = NULL;
     }
     context->itemCount = 0;
+    
+    // Unload Mike's special texture
+    if (context->mike_down_tex.id != 0) {
+        UnloadTexture(context->mike_down_tex);
+        context->mike_down_tex.id = 0;
+    }
     
     // Unload Doors
     if (context->worldDoors != NULL){

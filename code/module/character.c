@@ -70,6 +70,7 @@ Character InitCharacter(Settings* game_settings, Data* game_data, Map* game_map)
     character.max_sanity = 100.0f;
     character.exhausted = false;
     character.needs_shift_reset = false;
+    character.can_move = true;
 
     if (game_data->position.x != -1.0f){
         character.position = game_data->position;
@@ -95,10 +96,12 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
 
     // Handle movement input
     Vector2 movement = {0, 0};
-    if (IsKeyDown(KEY_W)){movement.y -= 1; character->direction = 3;}
-    if (IsKeyDown(KEY_S)){movement.y += 1; character->direction = 0;}
-    if (IsKeyDown(KEY_A)){movement.x -= 1; character->direction = 1; character->last_horiz_dir = 1;}
-    if (IsKeyDown(KEY_D)){movement.x += 1; character->direction = 2; character->last_horiz_dir = 2;}
+    if (character->can_move) {
+        if (IsKeyDown(KEY_W)){movement.y -= 1; character->direction = 3;}
+        if (IsKeyDown(KEY_S)){movement.y += 1; character->direction = 0;}
+        if (IsKeyDown(KEY_A)){movement.x -= 1; character->direction = 1; character->last_horiz_dir = 1;}
+        if (IsKeyDown(KEY_D)){movement.x += 1; character->direction = 2; character->last_horiz_dir = 2;}
+    }
 
     // Handle story-specific movement logic
     StoryPhase* active = GetActivePhase(story);
@@ -164,7 +167,10 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
         Rectangle collision_rect_x = {next_x, character->position.y, character->size.x, character->size.y};
         if (CheckMapCollision(map, collision_rect_x, picked_up_registry, picked_up_count, day2_active)) collision_x = true;
         for (int i = 0; i < itemCount; i++) if (!items[i].picked_up && !items[i].no_collision && CheckCollisionRecs(collision_rect_x, items[i].base.bounds)) { collision_x = true; break; }
-        for (int i = 0; i < npcCount; i++) if (CheckCollisionRecs(collision_rect_x, npcs[i].base.bounds)) { collision_x = true; break; }
+        for (int i = 0; i < npcCount; i++) {
+            if (strcmp(npcs[i].base.interactable_id, "mike") == 0) continue;
+            if (CheckCollisionRecs(collision_rect_x, npcs[i].base.bounds)) { collision_x = true; break; }
+        }
         for (int i = 0; i < doorCount; i++) if (CheckCollisionRecs(collision_rect_x, doors[i].base.bounds)) { collision_x = true; break; }
 
         if (next_x >= 0 && next_x + character->size.x <= map_size.x && !collision_x) character->position.x = next_x;
@@ -174,7 +180,10 @@ void UpdateCharacter(Character *character, Settings *game_settings, Vector2 map_
         Rectangle collision_rect_y = {character->position.x, next_y, character->size.x, character->size.y};
         if (CheckMapCollision(map, collision_rect_y, picked_up_registry, picked_up_count, day2_active)) collision_y = true;
         for (int i = 0; i < itemCount; i++) if (!items[i].picked_up && !items[i].no_collision && CheckCollisionRecs(collision_rect_y, items[i].base.bounds)) { collision_y = true; break; }
-        for (int i = 0; i < npcCount; i++) if (CheckCollisionRecs(collision_rect_y, npcs[i].base.bounds)) { collision_y = true; break; }
+        for (int i = 0; i < npcCount; i++) {
+            if (strcmp(npcs[i].base.interactable_id, "mike") == 0) continue;
+            if (CheckCollisionRecs(collision_rect_y, npcs[i].base.bounds)) { collision_y = true; break; }
+        }
         for (int i = 0; i < doorCount; i++) if (CheckCollisionRecs(collision_rect_y, doors[i].base.bounds)) { collision_y = true; break; }
 
         if (next_y >= 0 && next_y + character->size.y <= map_size.y && !collision_y) character->position.y = next_y;

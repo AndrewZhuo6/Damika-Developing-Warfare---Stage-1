@@ -580,6 +580,10 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[], in
     };
     // Check for NPCs
     for (int i = 0; i < npcCount; i++){
+        if (strcmp(worldNPCs[i].base.interactable_id, "mike") == 0) {
+            worldNPCs[i].base.isActive = false;
+            continue;
+        }
         if (CheckCollisionRecs(playerHitbox, worldNPCs[i].base.bounds)){
             worldNPCs[i].base.isActive = true;
             float dist = Vector2Distance(playerPos, (Vector2){worldNPCs[i].base.bounds.x, worldNPCs[i].base.bounds.y});

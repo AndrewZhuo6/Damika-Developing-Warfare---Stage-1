@@ -757,6 +757,18 @@
                  "width":0,
                  "x":2923.39596556275,
                  "y":2485.38930434236
+                }, 
+                {
+                 "height":156.091370558376,
+                 "id":121,
+                 "name":"mike",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":85.3426395939086,
+                 "x":2793.76518856255,
+                 "y":2435.51780817661
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -824,7 +836,7 @@
          "y":0
         }],
  "nextlayerid":11,
- "nextobjectid":121,
+ "nextobjectid":122,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.0",

@@ -530,11 +530,26 @@ void DrawGameplay(Scene* scene, Settings* game_settings, Interactive* game_inter
 
     // Draw NPCs
     for (int i = 0; i < game_context->npcCount; i++) {
+        if (strcmp(worldNPCs[i].base.interactable_id, "mike") == 0) continue; // Mike handled specially below
+
         if (worldNPCs[i].base.texture.id != 0) {
             DrawTexturePro(worldNPCs[i].base.texture, 
                 (Rectangle){0, 0, (float)worldNPCs[i].base.texture.width, (float)worldNPCs[i].base.texture.height},
                 worldNPCs[i].base.bounds, (Vector2){0, 0}, 0.0f, WHITE);
         }
+    }
+
+    // Draw Mike specially with animation
+    if (game_context->mike_down_tex.id != 0 && !game_context->mike_cutscene_played) {
+        float frame_w = (float)game_context->mike_down_tex.width / 4.0f;
+        int frame = (int)(GetTime() * 8) % 4;
+        // Mike is only "moving" during stages 2 and 3
+        if (game_context->mike_cutscene_stage < 2 || game_context->mike_cutscene_stage > 3) frame = 0; 
+        
+        Rectangle source = { frame * frame_w, 0, frame_w, (float)game_context->mike_down_tex.height };
+        // Use Mike's current position and Tiled size from GameContext
+        Rectangle dest = { game_context->mike_pos.x, game_context->mike_pos.y, game_context->mike_size.x, game_context->mike_size.y };
+        DrawTexturePro(game_context->mike_down_tex, source, dest, (Vector2){0,0}, 0.0f, WHITE);
     }
 
     bool is_lawnmower_phase = false;
