@@ -202,8 +202,24 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
             }
         }
 
-        // Draw phone
+        // Draw Phone
         DrawPhone(&game_context->phone);
+
+        // Draw photo overlay
+        if (game_context->photo_overlay_active && game_context->photo_overlay.id != 0) {
+            float scale = 0.75f;
+            float drawW = (float)GetScreenWidth() * scale;
+            float drawH = (float)GetScreenHeight() * scale;
+            float x = ((float)GetScreenWidth() - drawW) / 2.0f;
+            float y = ((float)GetScreenHeight() - drawH) / 2.0f;
+            
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
+            DrawTexturePro(game_context->photo_overlay,
+                (Rectangle){0, 0, (float)game_context->photo_overlay.width, (float)game_context->photo_overlay.height},
+                (Rectangle){x, y, drawW, drawH},
+                (Vector2){0, 0}, 0.0f, WHITE);
+            DrawRectangleLinesEx((Rectangle){x, y, drawW, drawH}, 3, RAYWHITE);
+        }
         
         // Draw objectives
         StoryPhase* active_phase = GetActivePhase(&game_context->story);
@@ -388,7 +404,15 @@ void DrawGame(Scene *game_scene, Settings *game_settings, Interactive *game_inte
     if (*game_state == ENDING_CUTSCENE && game_context->story.ending_active) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), BLACK);
         
-        if (game_context->story.ending_show_credits) {
+        if (game_context->story.ending_photo_active) {
+            // Draw ending photo FullScreen
+            if (game_context->story.ending_photo.id != 0) {
+                DrawTexturePro(game_context->story.ending_photo,
+                    (Rectangle){0, 0, (float)game_context->story.ending_photo.width, (float)game_context->story.ending_photo.height},
+                    (Rectangle){0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()},
+                    (Vector2){0, 0}, 0.0f, WHITE);
+            }
+        } else if (game_context->story.ending_show_credits) {
             // Scrolling Credits screen
             game_context->story.ending_credits_y -= 40.0f * GetFrameTime();
             

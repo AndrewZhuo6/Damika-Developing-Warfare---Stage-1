@@ -72,6 +72,7 @@ typedef struct {
     char target_loc[32];                 // Optional fade location
     bool triggers_phone;                 // If true, activates the phase's phone notification
     char trigger_ending_file[64];        // If set, triggers ending cutscene with this file
+    char photo_trigger[64];              // If set, displays this photo during notification
 } DialogueNode;
 
 

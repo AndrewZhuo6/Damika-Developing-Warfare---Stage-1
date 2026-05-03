@@ -62,6 +62,11 @@ typedef struct GameContext {
     Scene *game_scene;                // Pointer to the game scene for fading/transitions
     struct Dialogue *game_dialogue;   // Pointer to the dialogue system
     
+    // Photo overlay state
+    Texture2D photo_overlay;
+    bool photo_overlay_active;
+    float photo_overlay_timer;
+
     // Dynamic asset storage
     NPC* worldNPCs;            // Array of NPCs
     int npcCount;              // Number of NPCs

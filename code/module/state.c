@@ -92,6 +92,16 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         UpdateFade(game_scene, GetFrameTime(), *game_state);
     }
 
+    // Update photo overlay
+    if (game_context->photo_overlay_active) {
+        game_context->photo_overlay_timer -= GetFrameTime();
+        if (game_context->photo_overlay_timer <= 0) {
+            game_context->photo_overlay_active = false;
+            if (game_context->photo_overlay.id != 0) UnloadTexture(game_context->photo_overlay);
+            game_context->photo_overlay.id = 0;
+        }
+    }
+
     // Refresh UI layout if window was resized
     if (IsWindowResized() && game_interactive != NULL){
         UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
@@ -161,6 +171,13 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         game_scene->is_fading_in = true;
         game_scene->is_fading_out = false;
         game_scene->fade_alpha = 1.0f;
+        
+        // Clear photo overlay on map transition
+        if (game_context->photo_overlay_active) {
+            game_context->photo_overlay_active = false;
+            if (game_context->photo_overlay.id != 0) UnloadTexture(game_context->photo_overlay);
+            game_context->photo_overlay.id = 0;
+        }
         
         StoryPhase* active = GetActivePhase(&game_context->story);
         if (active) LoadPhaseAssets(active, game_context);

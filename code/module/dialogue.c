@@ -248,6 +248,32 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
             if (!is_else) skip_indent = line_indent;
             chain_met = met;
             continue;
+        } else if (strstr(line, "[IF] SANITY") || strstr(line, "[ELSE IF] SANITY")) {
+            int is_else = (strstr(line, "[ELSE") != NULL);
+            if (is_else && skip_indent != -1 && line_indent == skip_indent) {
+                if (chain_met) { skip_block = true; continue; }
+            }
+            
+            float val = 0;
+            if (context) val = context->player->sanity;
+            bool met = false;
+            
+            float target = 0;
+            if (strstr(line, "<")) {
+                sscanf(strstr(line, "<") + 1, "%f", &target);
+                met = (val < target);
+            } else if (strstr(line, ">")) {
+                sscanf(strstr(line, ">") + 1, "%f", &target);
+                met = (val > target);
+            } else if (strstr(line, "==")) {
+                sscanf(strstr(line, "==") + 2, "%f", &target);
+                met = (val == target);
+            }
+            
+            skip_block = !met;
+            if (!is_else) skip_indent = line_indent;
+            chain_met = met;
+            continue;
         } else if (strstr(line, "_TALKED")) {
             char* if_start = strstr(line, "[IF] ");
             if (if_start) {
@@ -331,6 +357,13 @@ void LoadInteraction(const char* filename, Dialogue* dialogue, struct GameContex
             char filename[64];
             if (sscanf(strstr(line, "[TRIGGER_ENDING]"), "[TRIGGER_ENDING] %s", filename) == 1) {
                 strncpy(dialogue->nodes[current_parent_idx].trigger_ending_file, filename, 63);
+            }
+        }
+        // 6. Photo Tag
+        if (strstr(line, "[PHOTO]")) {
+            char filename[64];
+            if (sscanf(strstr(line, "[PHOTO]"), "[PHOTO] %s", filename) == 1) {
+                strncpy(dialogue->nodes[current_parent_idx].photo_trigger, filename, 63);
             }
         }
         if (strstr(line, "[CONVERSATION]")) {

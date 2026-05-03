@@ -1250,13 +1250,8 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
             while (*filename == ' ') filename++;
             strncpy(phase->ending_file, filename, 127);
             phase->has_ending = true;
-            TraceLog(LOG_INFO, "PARSER: [TRIGGER_ENDING] parsed -> %s (has_ending=true)", filename);
         }
     }
-    
-    TraceLog(LOG_INFO, "PARSER DONE: narr_count=%d, phone_count=%d, has_ending=%d, ending_file=%s, sanity=%.0f",
-             phase->narration_count, phase->phone_message_count, phase->has_ending, phase->ending_file,
-             game_context->player ? game_context->player->sanity : -1);
     fclose(file);
 }
 
@@ -1269,10 +1264,7 @@ static void LoadEndingSequence(StorySystem* story, StoryPhase* phase) {
              phase->ending_file);
     
     FILE* file = fopen(path, "r");
-    if (!file) {
-        TraceLog(LOG_WARNING, "ENDING: Could not open ending file: %s", path);
-        return;
-    }
+    if (!file) return;
     
     story->ending_line_count = 0;
     char line[256];
@@ -1291,21 +1283,20 @@ static void LoadEndingSequence(StorySystem* story, StoryPhase* phase) {
     
     story->ending_active = true;
     story->ending_show_credits = false;
+    story->ending_photo_active = false;
     story->ending_current_line = 0;
     story->ending_typing_timer = 0.0f;
     story->ending_typing_index = 0;
-    
-    TraceLog(LOG_INFO, "ENDING: Loaded %d lines from %s", story->ending_line_count, phase->ending_file);
+
+    // Capture ending name for photo
+    strncpy(story->current_ending_name, GetFileNameWithoutExt(phase->ending_file), 63);
 }
 
 void TriggerEnding(StorySystem* story, const char* ending_file) {
     if (!story || !ending_file || strlen(ending_file) == 0) return;
     
     FILE* file = fopen(ending_file, "r");
-    if (!file) {
-        TraceLog(LOG_WARNING, "ENDING: Could not open ending file: %s", ending_file);
-        return;
-    }
+    if (!file) return;
     
     story->ending_line_count = 0;
     char line[256];
@@ -1324,17 +1315,51 @@ void TriggerEnding(StorySystem* story, const char* ending_file) {
     
     story->ending_active = true;
     story->ending_show_credits = false;
+    story->ending_photo_active = false;
     story->ending_current_line = 0;
     story->ending_typing_timer = 0.0f;
     story->ending_typing_index = 0;
     
-    TraceLog(LOG_INFO, "ENDING: Triggered %d lines from %s", story->ending_line_count, ending_file);
+    // Capture the ending name to derive the photo path later
+    strncpy(story->current_ending_name, GetFileNameWithoutExt(ending_file), 63);
 }
 
 void HandleEndingInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio) {
     StorySystem* story = &game_context->story;
     
-    if (!story->ending_active) return;
+    // Photo screen — show for 3 seconds
+    if (story->ending_photo_active) {
+        story->ending_photo_timer -= GetFrameTime();
+        if (story->ending_photo_timer <= 0) {
+            story->ending_photo_active = false;
+            if (story->ending_photo.id != 0) UnloadTexture(story->ending_photo);
+            story->ending_photo.id = 0;
+            
+            // Proceed to credits
+            story->ending_show_credits = true;
+            
+            // Initialize credits
+            story->ending_credits_line_count = 0;
+            FILE* f = fopen("../assets/text/day4/credit.txt", "r");
+            if (f) {
+                char cline[128];
+                while (fgets(cline, sizeof(cline), f) && story->ending_credits_line_count < 128) {
+                    char* end = cline + strlen(cline) - 1;
+                    while (end >= cline && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+                    strncpy(story->ending_credits_lines[story->ending_credits_line_count], cline, 127);
+                    story->ending_credits_line_count++;
+                }
+                fclose(f);
+            }
+            story->ending_credits_y = (float)GetScreenHeight();
+            
+            if (game_audio) {
+                StopMusicStream(game_audio->bg_music);
+                PlayMusicStream(game_audio->credit_music);
+            }
+        }
+        return;
+    }
     
     // Credits screen — SPACE returns to main menu
     if (story->ending_show_credits) {
@@ -1384,29 +1409,14 @@ void HandleEndingInput(struct GameContext* game_context, int* game_state, struct
             story->ending_typing_index = 0;
             story->ending_typing_timer = 0.0f;
             
-            // If past last line, show credits
+            // If past last line, show ending photo
             if (story->ending_current_line >= story->ending_line_count) {
-                story->ending_show_credits = true;
+                story->ending_photo_active = true;
+                story->ending_photo_timer = 3.0f;
                 
-                // Initialize credits
-                story->ending_credits_line_count = 0;
-                FILE* f = fopen("../assets/text/day4/credit.txt", "r");
-                if (f) {
-                    char cline[128];
-                    while (fgets(cline, sizeof(cline), f) && story->ending_credits_line_count < 128) {
-                        char* end = cline + strlen(cline) - 1;
-                        while (end >= cline && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
-                        strncpy(story->ending_credits_lines[story->ending_credits_line_count], cline, 127);
-                        story->ending_credits_line_count++;
-                    }
-                    fclose(f);
-                }
-                story->ending_credits_y = (float)GetScreenHeight();
-                
-                if (game_audio) {
-                    StopMusicStream(game_audio->bg_music);
-                    PlayMusicStream(game_audio->credit_music);
-                }
+                char photo_path[128];
+                sprintf(photo_path, "../assets/images/ending/%s.png", story->current_ending_name);
+                story->ending_photo = LoadTexture(photo_path);
             }
         }
     }
@@ -1416,10 +1426,7 @@ void TriggerOpening(StorySystem* story, const char* opening_file) {
     if (!story || !opening_file || strlen(opening_file) == 0) return;
     
     FILE* file = fopen(opening_file, "r");
-    if (!file) {
-        TraceLog(LOG_WARNING, "OPENING: Could not open opening file: %s", opening_file);
-        return;
-    }
+    if (!file) return;
     
     story->opening_line_count = 0;
     char line[256];
@@ -1437,8 +1444,6 @@ void TriggerOpening(StorySystem* story, const char* opening_file) {
     story->opening_current_line = 0;
     story->opening_typing_timer = 0.0f;
     story->opening_typing_index = 0;
-    
-    TraceLog(LOG_INFO, "OPENING: Triggered %d lines from %s", story->opening_line_count, opening_file);
 }
 
 void HandleOpeningInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio) {

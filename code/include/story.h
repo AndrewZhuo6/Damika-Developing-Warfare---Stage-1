@@ -231,6 +231,10 @@ typedef struct StorySystem {
     char ending_credits_lines[128][128];    // Parsed credit text lines
     int ending_credits_line_count;          // Total credit lines
     float ending_credits_y;                 // Current Y position for scrolling
+    bool ending_photo_active;               // Is an ending photo currently showing?
+    float ending_photo_timer;               // Timer for how long to show the photo
+    Texture2D ending_photo;                 // Texture for the ending photo
+    char current_ending_name[64];           // Filename of the current ending (to derive photo path)
 } StorySystem;
 
 /**

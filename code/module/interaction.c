@@ -280,6 +280,14 @@ static void ApplyNodeSideEffects(DialogueNode* node, struct GameContext* context
             }
         }
     }
+    if (node->photo_trigger[0] != '\0') {
+        char photo_path[128];
+        snprintf(photo_path, sizeof(photo_path), "../assets/map/map_apart/%s", node->photo_trigger);
+        if (context->photo_overlay.id != 0) UnloadTexture(context->photo_overlay);
+        context->photo_overlay = LoadTexture(photo_path);
+        context->photo_overlay_active = true;
+        context->photo_overlay_timer = 5.0f;
+    }
 }
 
 /**
