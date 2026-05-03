@@ -4,6 +4,14 @@
  * 
  * Handles management of tilesets and interactions with the cute_tiled library.
  * 
+ * Update History:
+ * - 2026-05-02: Added `bear_trap_inside` parameter to `DrawMap`. (Goal: Pass the bear trap
+ *                visibility flag from `GameContext` to the map renderer for conditional layer drawing.)
+ * 
+ * Revision Details:
+ * - Updated `DrawMap` signature to include `bool bear_trap_inside` for conditional `bear_trap`
+ *    tile layer rendering.
+ * 
  * Authors: Andrew Zhuo
  */
 
@@ -55,7 +63,7 @@ Map InitMap(const char* path, const char* spawn_id);
  * @param fireplace_on Flag to determine if fireplace layer should be drawn.
  * @param doors Flag to determine if doors layer should be drawn.
  */
-void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx);
+void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx, bool bear_trap_inside);
 
 /**
  * @brief Deallocates map textures and Tiled memory.

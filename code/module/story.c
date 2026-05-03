@@ -36,6 +36,31 @@
  *                ambient horror sound effects inline during narration by matching `[PLAY]` tag values
  *                to named `Sound` handles in the `Audio` struct, enabling audio cues like door banging,
  *                window scraping, and chimney rustling at precise narrative moments.)
+ * - 2026-05-02: Implemented the ending sequence engine (`LoadEndingSequence`, `TriggerEnding`,
+ *                `HandleEndingInput`). (Goal: Parse ending scripts from text files in `Speaker: text`
+ *                format, display them as typed dialogue on a black screen, and transition to a scrolling
+ *                credits sequence with dedicated music upon completion.)
+ * - 2026-05-02: Implemented scrolling credits with dedicated credit music. (Goal: After the ending
+ *                dialogue concludes, load `credit.txt` line-by-line, initialize the scroll Y to the
+ *                bottom of the screen, stop background music, start credit music, and enforce SPACE
+ *                only after all text has scrolled off-screen.)
+ * - 2026-05-02: Added `SANITY` comparison support to `EvaluateCondition`. (Goal: Enable `[IF] SANITY > 50`
+ *                conditionals in `narration.txt` to gate narrative branches based on the player's current
+ *                sanity value.)
+ * - 2026-05-02: Added custom branching logic for Day 4 `SET1-PHASE1` in `AdvanceStory`. (Goal: Route
+ *                the player to SET2 (Saul/Forest ending) or SET3 (Farmer ending) based on their current
+ *                location when the phase ends, enabling the story to fork into multiple ending paths.)
+ * - 2026-05-02: Extended `CONDITION_ENTER_LOCATION` to support dual-location OR conditions. (Goal:
+ *                Allow Day 4 SET1-PHASE1 to end when the player enters either the Forest OR the Farm,
+ *                parsed from `[CONDITION] ENTER_LOCATION FOREST | FARM`.)
+ * - 2026-05-02: Added conditional quest parsing with `| CONDITION` syntax in `LoadStoryDay`. (Goal:
+ *                Dynamically include or exclude quests based on met-NPC history, so the Saul quest
+ *                only appears if the player met Saul on Day 1 and again on a later day.)
+ * - 2026-05-02: Added `CONDITION_NARRATION_COMPLETE` guard against `ending_active`. (Goal: Prevent
+ *                story advancement while an ending sequence is playing, ensuring the ending runs to
+ *                completion before the phase is considered done.)
+ * - 2026-05-03: Fixed ending photo path resolution and name extraction. (Goal: Ensure that 
+ *                photos correctly load for all endings, including those triggered by phase completion.)
  * 
  * Revision Details:
  * - Refactored `AdvanceStory` to support loading `dayX.txt` files dynamically via `LoadStoryDay`.
@@ -69,13 +94,37 @@
  *    true sequential siblings (auto-advance targets) and branch entry points (reached only via choice).
  * - Expanded the phone data copy loop in `HandleNarrationInput` from 8 to 32 to match the increased
  *    `StoryPhase.phone_messages` and `StorySystem.phone_active_messages` array capacities.
+ * - Created `LoadEndingSequence` static function that reads an ending script file relative to the
+ *    current set/phase directory, populating `ending_lines` and initializing typing effect state.
+ * - Created `TriggerEnding` public function for dialogue-triggered endings accepting an absolute path.
+ * - Created `HandleEndingInput` function implementing: typing effect progression, SPACE-to-skip typing,
+ *    SPACE-to-advance-line, credits loading from `credit.txt`, credit music swap, and MAINMENU return
+ *    with save deletion.
+ * - Added `StopMusicStream(credit_music)` and `PlayMusicStream(bg_music)` on SPACE return to main menu.
+ * - Gated credits SPACE handler behind `last_line_y < -50.0f` to prevent premature skipping.
+ * - Added `SANITY` case to `EvaluateCondition` supporting `>` and `<` operators against `player->sanity`.
+ * - Added `ending_active` check in `AllConditionsMet` for `CONDITION_NARRATION_COMPLETE`.
+ * - Added Day 4 `SET1-PHASE1` branching in `AdvanceStory` routing to SET2 (Forest) or SET3 (Farm).
+ * - Extended `ParseCondition` to handle `[CONDITION] ENTER_LOCATION LOC1 | LOC2` syntax with `target_value2`.
+ * - Added quest conditional parsing: `[QUEST] description | CONDITION` strips the condition, evaluates
+ *    met-NPC history, and only adds the quest if the condition is satisfied.
+ * - Updated `LoadStoryDay` signature to accept `GameContext*` for conditional quest evaluation.
+ * - Added `[TRIGGER_ENDING]` tag parsing in `LoadPhaseNarration`.
+ * - Added ending trigger logic in `UpdateStory` and `HandleNarrationInput` that calls
+ *    `LoadEndingSequence` when narration ends on a phase with `has_ending == true`.
+ * - Reset `has_ending` and `ending_file` at the start of `LoadPhaseNarration`.
+ * - Updated `LoadEndingSequence` to extract the ending name from the filename using 
+ *    `GetFileNameWithoutExt` and store it in `current_ending_name`.
+ * - Synchronized `TriggerEnding` to use the same name-extraction logic for consistency.
+ * - Added `ending_photo_active` initialization to `LoadEndingSequence` to prevent visual bugs.
  * 
  * Authors: Andrew Zhuo
  */
-
+ 
 #include "story.h"
 #include "scene.h"
 #include "game_context.h"
+#include "data.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -84,6 +133,9 @@
 #include "data.h"
 #include "audio.h"
 #include "raylib.h"
+
+// Forward declarations
+static void LoadEndingSequence(StorySystem* story, StoryPhase* phase);
 
 /**
  * @brief Trims leading and trailing whitespace from a string.
@@ -113,7 +165,7 @@ static void ReplaceNewlines(char* str) {
     *dst = '\0';
 }
 
-void LoadStoryDay(StorySystem* story, const char* path) {
+void LoadStoryDay(StorySystem* story, const char* path, struct GameContext* game_context) {
     FILE* file = fopen(path, "r");
 
     memset(story, 0, sizeof(StorySystem));
@@ -450,8 +502,23 @@ void LoadStoryDay(StorySystem* story, const char* path) {
                         sscanf(line, "[CONDITION] TIME_PASS %f", &cond->target_value);
                     } else if (strcmp(type_str, "ENTER_LOCATION") == 0){
                         cond->type = CONDITION_ENTER_LOCATION;
-                        char loc_str[32];
-                        if (sscanf(line, "[CONDITION] ENTER_LOCATION %s", loc_str) == 1){
+                        cond->target_value2 = -1.0f; // Initialize as none
+                        char loc_str[32] = {0};
+                        char loc_str2[32] = {0};
+                        
+                        if (sscanf(line, "[CONDITION] ENTER_LOCATION %s OR %s", loc_str, loc_str2) == 2){
+                            if (strcmp(loc_str, "INTERIOR") == 0) cond->target_value = (float)STORY_LOC_INTERIOR;
+                            else if (strcmp(loc_str, "EXTERIOR") == 0) cond->target_value = (float)STORY_LOC_EXTERIOR;
+                            else if (strcmp(loc_str, "FARM") == 0) cond->target_value = (float)STORY_LOC_FARM;
+                            else if (strcmp(loc_str, "FOREST") == 0) cond->target_value = (float)STORY_LOC_FOREST;
+                            else if (strcmp(loc_str, "APARTMENT") == 0) cond->target_value = (float)STORY_LOC_APARTMENT;
+                            
+                            if (strcmp(loc_str2, "INTERIOR") == 0) cond->target_value2 = (float)STORY_LOC_INTERIOR;
+                            else if (strcmp(loc_str2, "EXTERIOR") == 0) cond->target_value2 = (float)STORY_LOC_EXTERIOR;
+                            else if (strcmp(loc_str2, "FARM") == 0) cond->target_value2 = (float)STORY_LOC_FARM;
+                            else if (strcmp(loc_str2, "FOREST") == 0) cond->target_value2 = (float)STORY_LOC_FOREST;
+                            else if (strcmp(loc_str2, "APARTMENT") == 0) cond->target_value2 = (float)STORY_LOC_APARTMENT;
+                        } else if (sscanf(line, "[CONDITION] ENTER_LOCATION %s", loc_str) == 1){
                             if (strcmp(loc_str, "INTERIOR") == 0) cond->target_value = (float)STORY_LOC_INTERIOR;
                             else if (strcmp(loc_str, "EXTERIOR") == 0) cond->target_value = (float)STORY_LOC_EXTERIOR;
                             else if (strcmp(loc_str, "FARM") == 0) cond->target_value = (float)STORY_LOC_FARM;
@@ -485,9 +552,35 @@ void LoadStoryDay(StorySystem* story, const char* path) {
             // Treat as a quest description
             if (phase->quest_count < MAX_QUESTS_PER_PHASE){
                 const char* desc = strstr(line, "[QUEST] ") ? (line + 8) : line;
-                strncpy(phase->quests[phase->quest_count].description, desc, 63);
-                phase->quests[phase->quest_count].completed = false;
-                phase->quest_count++;
+                char desc_buffer[128];
+                strncpy(desc_buffer, desc, 127);
+                desc_buffer[127] = '\0';
+                
+                bool condition_met = true;
+                char* cond_delimiter = strstr(desc_buffer, " | ");
+                if (cond_delimiter) {
+                    *cond_delimiter = '\0'; // Truncate the description to remove the condition string
+                    if (game_context) {
+                        const char* condition_str = cond_delimiter + 3;
+                        if (strstr(condition_str, "SAUL_TALKED == TRUE on day1 and SAUL_TALKED == TRUE on day >= 2")) {
+                            bool met_day1 = false;
+                            bool met_day2_plus = false;
+                            for (int m = 0; m < game_context->met_npc_count; m++) {
+                                if (strcmp(game_context->met_npcs[m], "saul") == 0) {
+                                    if (game_context->met_npc_day[m] == 1) met_day1 = true;
+                                    if (game_context->met_npc_day[m] >= 2) met_day2_plus = true;
+                                }
+                            }
+                            condition_met = (met_day1 && met_day2_plus);
+                        }
+                    }
+                }
+                
+                if (condition_met) {
+                    strncpy(phase->quests[phase->quest_count].description, desc_buffer, 63);
+                    phase->quests[phase->quest_count].completed = false;
+                    phase->quest_count++;
+                }
             }
         }
     }
@@ -537,12 +630,14 @@ static bool AllConditionsMet(StoryPhase* active, struct GameContext* game_contex
 
             case CONDITION_ENTER_LOCATION:
                 if (game_context->location == (int)cond->target_value) cond->met = true;
+                else if (cond->target_value2 != -1.0f && game_context->location == (int)cond->target_value2) cond->met = true;
                 if (!cond->met) return false;
                 break;
 
             case CONDITION_NARRATION_COMPLETE: {
                 // Check that narration is no longer active AND has actually started
                 if (game_context->story.narration_active) return false;
+                if (game_context->story.ending_active) return false;  // Ending blocks advancement
                 if (active->narration_count > 0 && !game_context->story.narration_has_started) return false;
                 if (!game_context->story.narration_loop_broken) {
                     for (int j = 0; j < active->narration_choice_count; j++) {
@@ -620,6 +715,11 @@ void UpdateStory(struct GameContext* game_context, float delta){
                 if (story->narration_current_line >= active->narration_count) {
                     if (active->narration_choice_count == 0) {
                         story->narration_active = false;
+                        TraceLog(LOG_INFO, "ENDING CHECK (UpdateStory): has_ending=%d, ending_file=%s, narr_count=%d",
+                                 active->has_ending, active->ending_file, active->narration_count);
+                        if (active->has_ending) {
+                            LoadEndingSequence(story, active);
+                        }
                     }
                 }
             }
@@ -671,6 +771,22 @@ void AdvanceStory(struct GameContext* game_context){
     if (story->current_set_idx < 0 || story->current_set_idx >= MAX_SETS_PER_DAY) return;
     
     StoryPhase* old = GetActivePhase(story);
+
+    // Custom Branching for Day 4 SET1-PHASE1
+    if (old && strcmp(story->day_folder, "day4") == 0 && strcmp(old->name, "SET1-PHASE1") == 0) {
+        if (game_context->location == FOREST) {
+            story->current_set_idx = 1; // SET2
+            story->current_phase_idx = 0;
+            story->phase_timer = 0;
+            return;
+        } else if (game_context->location == FARM) {
+            story->current_set_idx = 2; // SET3
+            story->current_phase_idx = 0;
+            story->phase_timer = 0;
+            return;
+        }
+    }
+
     story->current_phase_idx++;
     story->phase_timer = 0;
 
@@ -712,7 +828,7 @@ void AdvanceStory(struct GameContext* game_context){
                 snprintf(next_day_path, sizeof(next_day_path), "../assets/text/day%d/day%d.txt", current_day + 1, current_day + 1);
                 
                 if (FileExists(next_day_path)) {
-                    LoadStoryDay(story, next_day_path);
+                    LoadStoryDay(story, next_day_path, game_context);
                     // LoadStoryDay resets current_set_idx and current_phase_idx to 0
                     // which is what we want for the new day
                 } else {
@@ -940,9 +1056,15 @@ void HandleNarrationInput(struct GameContext* game_context, int* game_state, str
         
         if (story->narration_current_line >= active->narration_count) {
             if (active->narration_choice_count == 0) {
-                // No loop choices, just end narration
+                // No loop choices, end narration
                 story->narration_active = false;
-                *game_state = GAMEPLAY;
+                if (active->has_ending) {
+                    // Trigger ending sequence
+                    LoadEndingSequence(story, active);
+                    *game_state = ENDING_CUTSCENE;
+                } else {
+                    *game_state = GAMEPLAY;
+                }
             }
         }
         }
@@ -970,6 +1092,17 @@ static bool EvaluateCondition(struct GameContext* ctx, const char* cond) {
     if (strcmp(cond, "BEAR_TRAP_INSIDE") == 0) return ctx->bear_trap_inside;
     if (strcmp(cond, "BEAR_TRAP_OUTSIDE") == 0) return ctx->bear_trap_outside;
 
+    // Sanity comparison: "SANITY > 50", "SANITY < 101", etc.
+    if (strncmp(cond, "SANITY", 6) == 0) {
+        char op;
+        int threshold;
+        if (sscanf(cond, "SANITY %c %d", &op, &threshold) == 2 && ctx->player) {
+            if (op == '>') return ctx->player->sanity > threshold;
+            if (op == '<') return ctx->player->sanity < threshold;
+        }
+        return false;
+    }
+
     return false;
 }
 
@@ -989,6 +1122,8 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
 
     phase->narration_count = 0;
     phase->phone_message_count = 0;
+    phase->has_ending = false;
+    phase->ending_file[0] = '\0';
     
     char line[256];
     
@@ -1116,8 +1251,243 @@ void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context) {
                 phase->phone_messages[phase->phone_message_count].choice_count = 0;
                 phase->phone_message_count++;
             }
+        } else if (strncmp(trimmed, "[TRIGGER_ENDING]", 16) == 0) {
+            char* filename = trimmed + 16;
+            while (*filename == ' ') filename++;
+            strncpy(phase->ending_file, filename, 127);
+            phase->has_ending = true;
+        }
+    }
+    fclose(file);
+}
+
+static void LoadEndingSequence(StorySystem* story, StoryPhase* phase) {
+    if (!story || !phase || !phase->has_ending) return;
+    
+    char path[256];
+    snprintf(path, sizeof(path), "../assets/text/%s/set%d/phase%d/%s",
+             story->day_folder, story->current_set_idx + 1, story->current_phase_idx + 1,
+             phase->ending_file);
+    
+    FILE* file = fopen(path, "r");
+    if (!file) return;
+    
+    story->ending_line_count = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), file) && story->ending_line_count < 80) {
+        // Trim trailing newlines/carriage returns
+        char* end = line + strlen(line) - 1;
+        while (end >= line && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+        
+        // Skip empty lines
+        if (strlen(line) == 0) continue;
+        
+        strncpy(story->ending_lines[story->ending_line_count], line, 255);
+        story->ending_line_count++;
+    }
+    fclose(file);
+    
+    story->ending_active = true;
+    story->ending_show_credits = false;
+    story->ending_photo_active = false;
+    story->ending_current_line = 0;
+    story->ending_typing_timer = 0.0f;
+    story->ending_typing_index = 0;
+
+    // Capture ending name for photo
+    strncpy(story->current_ending_name, GetFileNameWithoutExt(phase->ending_file), 63);
+}
+
+void TriggerEnding(StorySystem* story, const char* ending_file) {
+    if (!story || !ending_file || strlen(ending_file) == 0) return;
+    
+    FILE* file = fopen(ending_file, "r");
+    if (!file) return;
+    
+    story->ending_line_count = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), file) && story->ending_line_count < 80) {
+        // Trim trailing newlines/carriage returns
+        char* end = line + strlen(line) - 1;
+        while (end >= line && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+        
+        // Skip empty lines
+        if (strlen(line) == 0) continue;
+        
+        strncpy(story->ending_lines[story->ending_line_count], line, 255);
+        story->ending_line_count++;
+    }
+    fclose(file);
+    
+    story->ending_active = true;
+    story->ending_show_credits = false;
+    story->ending_photo_active = false;
+    story->ending_current_line = 0;
+    story->ending_typing_timer = 0.0f;
+    story->ending_typing_index = 0;
+    
+    // Capture the ending name to derive the photo path later
+    strncpy(story->current_ending_name, GetFileNameWithoutExt(ending_file), 63);
+}
+
+void HandleEndingInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio) {
+    StorySystem* story = &game_context->story;
+    
+    // Photo screen — show for 3 seconds
+    if (story->ending_photo_active) {
+        story->ending_photo_timer -= GetFrameTime();
+        if (story->ending_photo_timer <= 0) {
+            story->ending_photo_active = false;
+            if (story->ending_photo.id != 0) UnloadTexture(story->ending_photo);
+            story->ending_photo.id = 0;
+            
+            // Proceed to credits
+            story->ending_show_credits = true;
+            
+            // Initialize credits
+            story->ending_credits_line_count = 0;
+            FILE* f = fopen("../assets/text/day4/credit.txt", "r");
+            if (f) {
+                char cline[128];
+                while (fgets(cline, sizeof(cline), f) && story->ending_credits_line_count < 128) {
+                    char* end = cline + strlen(cline) - 1;
+                    while (end >= cline && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+                    strncpy(story->ending_credits_lines[story->ending_credits_line_count], cline, 127);
+                    story->ending_credits_line_count++;
+                }
+                fclose(f);
+            }
+            story->ending_credits_y = (float)GetScreenHeight();
+            
+            if (game_audio) {
+                StopMusicStream(game_audio->bg_music);
+                PlayMusicStream(game_audio->credit_music);
+            }
+        }
+        return;
+    }
+    
+    // Credits screen — SPACE returns to main menu
+    if (story->ending_show_credits) {
+        float last_line_y = story->ending_credits_y + (story->ending_credits_line_count * 30.0f);
+        if (last_line_y < -50.0f && IsKeyPressed(KEY_SPACE)) {
+            story->ending_active = false;
+            story->ending_show_credits = false;
+            DeleteSaveData();
+            if (game_audio) {
+                StopMusicStream(game_audio->credit_music);
+                PlayMusicStream(game_audio->bg_music);
+            }
+            *game_state = MAINMENU;
+        }
+        return;
+    }
+    
+    // Typing effect logic
+    const char* current_text = NULL;
+    if (story->ending_current_line < story->ending_line_count) {
+        current_text = story->ending_lines[story->ending_current_line];
+    }
+    
+    int text_len = current_text ? strlen(current_text) : 0;
+    if (current_text && story->ending_typing_index < text_len) {
+        story->ending_typing_timer += GetFrameTime();
+        if (story->ending_typing_timer >= 0.03f) {
+            story->ending_typing_timer = 0.0f;
+            story->ending_typing_index++;
+            if (story->ending_typing_index >= text_len) {
+                if (game_audio && IsSoundPlaying(game_audio->typing_sound)) StopSound(game_audio->typing_sound);
+            } else if (game_audio && !IsSoundPlaying(game_audio->typing_sound)) {
+                PlaySound(game_audio->typing_sound);
+            }
         }
     }
     
+    // SPACE key handling
+    if (IsKeyPressed(KEY_SPACE)) {
+        if (story->ending_typing_index < text_len) {
+            // Skip typing effect
+            story->ending_typing_index = text_len;
+            if (game_audio && IsSoundPlaying(game_audio->typing_sound)) StopSound(game_audio->typing_sound);
+        } else {
+            // Advance to next line
+            story->ending_current_line++;
+            story->ending_typing_index = 0;
+            story->ending_typing_timer = 0.0f;
+            
+            // If past last line, show ending photo
+            if (story->ending_current_line >= story->ending_line_count) {
+                story->ending_photo_active = true;
+                story->ending_photo_timer = 3.0f;
+                
+                char photo_path[128];
+                sprintf(photo_path, "../assets/images/ending/%s.png", story->current_ending_name);
+                story->ending_photo = LoadTexture(photo_path);
+            }
+        }
+    }
+}
+
+void TriggerOpening(StorySystem* story, const char* opening_file) {
+    if (!story || !opening_file || strlen(opening_file) == 0) return;
+    
+    FILE* file = fopen(opening_file, "r");
+    if (!file) return;
+    
+    story->opening_line_count = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), file) && story->opening_line_count < 20) {
+        char* end = line + strlen(line) - 1;
+        while (end >= line && (*end == '\n' || *end == '\r')) { *end = '\0'; end--; }
+        if (strlen(line) == 0) continue;
+        
+        strncpy(story->opening_lines[story->opening_line_count], line, 255);
+        story->opening_line_count++;
+    }
     fclose(file);
+    
+    story->opening_active = true;
+    story->opening_current_line = 0;
+    story->opening_typing_timer = 0.0f;
+    story->opening_typing_index = 0;
+}
+
+void HandleOpeningInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio) {
+    StorySystem* story = &game_context->story;
+    if (!story->opening_active) return;
+    
+    const char* current_text = NULL;
+    if (story->opening_current_line < story->opening_line_count) {
+        current_text = story->opening_lines[story->opening_current_line];
+    }
+    
+    int text_len = current_text ? strlen(current_text) : 0;
+    if (current_text && story->opening_typing_index < text_len) {
+        story->opening_typing_timer += GetFrameTime();
+        if (story->opening_typing_timer >= 0.03f) {
+            story->opening_typing_timer = 0.0f;
+            story->opening_typing_index++;
+            if (story->opening_typing_index >= text_len) {
+                if (game_audio && IsSoundPlaying(game_audio->typing_sound)) StopSound(game_audio->typing_sound);
+            } else if (game_audio && !IsSoundPlaying(game_audio->typing_sound)) {
+                PlaySound(game_audio->typing_sound);
+            }
+        }
+    }
+    
+    if (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_ENTER)) {
+        if (story->opening_typing_index < text_len) {
+            story->opening_typing_index = text_len;
+            if (game_audio && IsSoundPlaying(game_audio->typing_sound)) StopSound(game_audio->typing_sound);
+        } else {
+            story->opening_current_line++;
+            story->opening_typing_index = 0;
+            story->opening_typing_timer = 0.0f;
+            
+            if (story->opening_current_line >= story->opening_line_count) {
+                story->opening_active = false;
+                *game_state = GAMEPLAY;
+            }
+        }
+    }
 }

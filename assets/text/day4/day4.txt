@@ -1,7 +1,7 @@
 SET1-PHASE1
 [LOCATION] EXTERIOR
 [QUEST] Ask farmer Johnny for help
-[QUEST] Go to the forest and find Saul (only available if the player has talked to saul on day 1 and day >= 2)
+[QUEST] Go to the forest and find Saul | SAUL_TALKED == TRUE on day1 and SAUL_TALKED == TRUE on day >= 2
 [INTERACTABLE_TYPE_ITEM] potato
 [INTERACTABLE_TYPE_ITEM] tree
 [INTERACTABLE_TYPE_ITEM] big tree
@@ -15,9 +15,9 @@ SET2-PHASE1
 [QUEST] Talk to Saul
 [INTERACTABLE_TYPE_ITEM] campfire
 [INTERACTABLE_TYPE_ITEM] tent
-[INTERACTABLE_TYPE_ITEM] giant tree
+[INTERACTABLE_TYPE_ITEM] giant_tree
 [INTERACTABLE_TYPE_NPC] saul
-[CONDITION] 
+[CONDITION] INTERACT_OBJECT saul 0
 [END]
 
 SET3-PHASE1
@@ -25,5 +25,5 @@ SET3-PHASE1
 [QUEST] Talk to Farmer Johnny
 [INTERACTABLE_TYPE_ITEM] scarecrow
 [INTERACTABLE_TYPE_NPC] farmer
-[CONDITION] 
+[CONDITION] INTERACT_OBJECT farmer 0
 [END]

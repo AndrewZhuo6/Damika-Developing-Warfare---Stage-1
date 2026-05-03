@@ -19,6 +19,13 @@
  *                compares the incoming map file path against the currently loaded path and only performs
  *                state resets when the player is truly transitioning between distinct map locations,
  *                preserving all narrative state during seamless SET4-PHASE1 to SET4-PHASE2 transitions.)
+ * - 2026-05-02: Added `ENDING_CUTSCENE` state handling. (Goal: Support the ending sequence as a
+ *                distinct game state with cursor hiding and transitions from `NARRATION_CUTSCENE`.)
+ * - 2026-05-02: Added Forest map transition support and MAINMENU layout refresh. (Goal: Enable
+ *                narrative routing to the forest map and ensure UI hitboxes refresh when returning
+ *                to the main menu after credits.)
+ * - 2026-05-03: Refactored photo overlay timing and implemented Mike cutscene logic. (Goal: 
+ *                Support the Mike cinematic sequence with scripted NPC movement and camera following.)
  * 
  * Revision Details:
  * - Implemented a global fade update hook in `UpdateGame` to manage asynchronous map transitions.
@@ -42,6 +49,15 @@
  * - Added `strcmp(map->current_path, target_path)` guard in the INTERIOR map load handler to
  *    conditionally reset `fireplace_on`, `main_door_locked`, and `doors` only when the player is
  *    entering a new map location, preventing state wipes during internal phase transitions.
+ * - Added `ENDING_CUTSCENE` case in the main state machine with `HideCursor()` logic.
+ * - Added `ending_active` check in `NARRATION_CUTSCENE` transition to route to the ending sequence.
+ * - Added `FOREST` location support in the phase-transition routing to `map_forest/forest.json`.
+ * - Implemented an `UpdateInteractiveLayout` trigger upon entering `MAINMENU` state to ensure
+ *    button hitboxes align with the current save-availability state (e.g., after credits delete save).
+ * - Added explicit `photo_overlay` cleanup in the map transition block to prevent visual carryover.
+ * - Implemented Mike NPC movement and camera-follow logic in `UpdateGame`.
+ * - Added `mike_cutscene_active` flag handling to manage cutscene start/end and camera control.
+ * - Moved photo overlay timer update to global `UpdateGame` to run regardless of state.
  * 
  * Authors: Andrew Zhuo and Steven Kenneth Darwy
  */
@@ -82,6 +98,16 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         UpdateFade(game_scene, GetFrameTime(), *game_state);
     }
 
+    // Update photo overlay
+    if (game_context->photo_overlay_active) {
+        game_context->photo_overlay_timer -= GetFrameTime();
+        if (game_context->photo_overlay_timer <= 0) {
+            game_context->photo_overlay_active = false;
+            if (game_context->photo_overlay.id != 0) UnloadTexture(game_context->photo_overlay);
+            game_context->photo_overlay.id = 0;
+        }
+    }
+
     // Refresh UI layout if window was resized
     if (IsWindowResized() && game_interactive != NULL){
         UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
@@ -95,6 +121,12 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
             game_context->game_dialogue->pending_target_map[0] = '\0';
         }
     }
+    
+    // Refresh UI layout when entering main menu (e.g. after credits when data is deleted)
+    if (last_state != *game_state && *game_state == MAINMENU) {
+        UpdateInteractiveLayout(game_interactive, *game_state, game_settings);
+    }
+    
     last_state = *game_state;
 
     // Map transition trigger at peak of fade
@@ -108,7 +140,26 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         
         bool is_new_map = (strcmp(game_map->current_path, game_scene->pending_map) != 0);
         FreeMap(game_map);
-        *game_map = InitMap(game_scene->pending_map, game_scene->pending_spawn_id);
+        
+        // Special case: Day 1 SET2-PHASE1 EXTERIOR map spawn
+        const char* spawn_id = game_scene->pending_spawn_id;
+        if (strcmp(game_context->story.day_folder, "day1") == 0 && 
+            game_context->story.current_set_idx == 1 && 
+            game_context->story.current_phase_idx == 0 &&
+            strstr(game_scene->pending_map, "map_ext/MAINMAP.json")) {
+            if (spawn_id[0] == '\0' || strcmp(spawn_id, "Spawn") == 0) {
+                spawn_id = "initial";
+            }
+        }
+
+        // Special case: From FARM to EXTERIOR
+        if (game_context->location == FARM && targetLoc == EXTERIOR) {
+            if (spawn_id[0] == '\0' || strcmp(spawn_id, "Spawn") == 0) {
+                spawn_id = "from_farm";
+            }
+        }
+
+        *game_map = InitMap(game_scene->pending_map, spawn_id);
         player->position = game_map->spawn_position;
         game_context->location = targetLoc;
 
@@ -126,6 +177,13 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         game_scene->is_fading_in = true;
         game_scene->is_fading_out = false;
         game_scene->fade_alpha = 1.0f;
+        
+        // Clear photo overlay on map transition
+        if (game_context->photo_overlay_active) {
+            game_context->photo_overlay_active = false;
+            if (game_context->photo_overlay.id != 0) UnloadTexture(game_context->photo_overlay);
+            game_context->photo_overlay.id = 0;
+        }
         
         StoryPhase* active = GetActivePhase(&game_context->story);
         if (active) LoadPhaseAssets(active, game_context);
@@ -147,8 +205,9 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
             UpdateInteractive(game_interactive, game_settings);
             if (game_interactive->is_new_game_clicked){
                 ResetGameData(game_context, game_map->spawn_position);
-                LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt");
-                *game_state = GAMEPLAY;
+                LoadStoryDay(&game_context->story, "../assets/text/day1/day1.txt", game_context);
+                TriggerOpening(&game_context->story, "../assets/text/day1/opening.txt");
+                *game_state = OPENING_CUTSCENE;
                 game_interactive->is_new_game_clicked = false;
                 StopMusicStream(game_audio->bg_music);
                 PlayMusicStream(game_audio->bg_music);
@@ -199,6 +258,7 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
                         else if (destLoc == EXTERIOR) {targetMap = "../assets/map/map_ext/MAINMAP.json"; targetLocStr = "EXTERIOR";}
                         else if (destLoc == INTERIOR) {targetMap = "../assets/map/map_int/MAIN_MAP_INT.json"; targetLocStr = "INTERIOR";}
                         else if (destLoc == FARM) {targetMap = "../assets/map/map_farm/FARM.json"; targetLocStr = "FARM";}
+                        else if (destLoc == FOREST) {targetMap = "../assets/map/map_forest/forest.json"; targetLocStr = "FOREST";}
                         StartFadeTransition(game_scene, BLACK, targetMap, targetLocStr, spawnObj);
                         
                         // Prevent triggering map transitions endlessly
@@ -302,7 +362,13 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
         case NARRATION_CUTSCENE:
             // Keep story timer running for phone auto-advance during narration
             UpdateStory(game_context, GetFrameTime());
-            if (!game_context->story.narration_active) *game_state = GAMEPLAY;
+            if (!game_context->story.narration_active) {
+                if (game_context->story.ending_active) {
+                    *game_state = ENDING_CUTSCENE;
+                } else {
+                    *game_state = GAMEPLAY;
+                }
+            }
             HideCursor();
             break;
         case PHOTO_CUTSCENE:
@@ -331,6 +397,12 @@ int UpdateGame(GameState* game_state, struct Interactive* game_interactive, Char
                 ClearCutscene(game_scene);
                 *game_state = GAMEPLAY; game_scene->current_cutscene_frame = 0;
             }
+            break;
+        case OPENING_CUTSCENE:
+            HideCursor();
+            break;
+        case ENDING_CUTSCENE:
+            HideCursor();
             break;
         default: break;
     }

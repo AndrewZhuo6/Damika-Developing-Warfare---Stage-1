@@ -1,3 +1,28 @@
+/**
+ * @file map.c
+ * @brief Declarations for Tiled map loading and spatial collision queries.
+ * 
+ * Update History:
+ * - 2026-05-02: Implemented stateless tile animation rendering. (Goal: Support Tiled
+ *                animation data by calculating the current animation frame on-the-fly using
+ *                `GetTime()` modulo arithmetic, enabling campfire-style tile animations without
+ *                additional state variables.)
+ * - 2026-05-02: Added conditional `bear_trap` layer rendering. (Goal: Skip the `bear_trap`
+ *                tile layer unless `bear_trap_inside` is `true` in `GameContext`, allowing the
+ *                bear trap to only appear in the interior map when the narrative has set it.)
+ * - 2026-05-03: Implemented NPC-specific collision skipping for Mike. (Goal: Prevent the player 
+ *                from colliding with Mike during his scripted cutscene movement.)
+ * 
+ * Revision Details:
+ * - Added `bool bear_trap_inside` parameter to `DrawMap` signature.
+ * - Added a layer-skip check for the "bear_trap" layer based on the `bear_trap_inside` flag.
+ * - Implemented Tiled tile animation support in `DrawMap` by traversing tile descriptors and
+ *    calculating the current frame based on total animation duration and elapsed game time.
+ * - Updated `CheckMapCollision` to explicitly ignore collisions with the "mike" NPC object.
+ * 
+ * Authors: Andrew Zhuo
+ */
+
 #define CUTE_TILED_IMPLEMENTATION
 #include <stdbool.h>
 #include <stdio.h>
@@ -48,7 +73,7 @@ Map InitMap(const char* path, const char* spawn_id){
     return map;
 }
 
-void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx){
+void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_idx, bool bear_trap_inside){
     if (!map || !map->tiled_map) return;
     cute_tiled_layer_t* layer = map->tiled_map->layers;
     while (layer){
@@ -58,6 +83,10 @@ void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_
                 continue;
             }
             if (!doors && layer->name.ptr && strcmp(layer->name.ptr, "doors") == 0) {
+                layer = layer->next;
+                continue;
+            }
+            if (!bear_trap_inside && layer->name.ptr && strcmp(layer->name.ptr, "bear_trap") == 0) {
                 layer = layer->next;
                 continue;
             }
@@ -92,6 +121,36 @@ void DrawMap(Map* map, bool fireplace_on, bool doors, bool day2_active, int set_
 
                 if (tileset && tileset_idx < map->tileset_count){
                     int id = gid - tileset->firstgid;
+                    
+                    // Check for tile animation
+                    cute_tiled_tile_descriptor_t* tile_desc = tileset->tiles;
+                    while (tile_desc) {
+                        if (tile_desc->tile_index == id) {
+                            if (tile_desc->frame_count > 0 && tile_desc->animation) {
+                                // Calculate total duration
+                                int total_duration = 0;
+                                for (int f = 0; f < tile_desc->frame_count; f++) {
+                                    total_duration += tile_desc->animation[f].duration;
+                                }
+                                if (total_duration > 0) {
+                                    // Calculate current time in ms
+                                    int current_time = (int)(GetTime() * 1000.0);
+                                    int time_in_anim = current_time % total_duration;
+                                    
+                                    // Find current frame
+                                    for (int f = 0; f < tile_desc->frame_count; f++) {
+                                        if (time_in_anim < tile_desc->animation[f].duration) {
+                                            id = tile_desc->animation[f].tileid;
+                                            break;
+                                        }
+                                        time_in_anim -= tile_desc->animation[f].duration;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                        tile_desc = tile_desc->next;
+                    }
                     int tx = (id % tileset->columns) * tileset->tilewidth;
                     int ty = (id / tileset->columns) * tileset->tileheight;
                     int x = i % layer->width;
@@ -172,6 +231,13 @@ bool CheckMapCollision(Map* map, Rectangle rect, char picked_up_registry[][64], 
                 bool skip = false;
                 if (object->name.ptr && strlen(object->name.ptr) > 0) {
                     if (strstr(object->name.ptr, "brown_grass") != NULL) skip = true;
+                    
+                    // Skip spawning points
+                    if (strcmp(object->name.ptr, "Spawn") == 0 || 
+                        strcmp(object->name.ptr, "from_farm") == 0 || 
+                        strcmp(object->name.ptr, "initial") == 0 ||
+                        strcmp(object->name.ptr, "mike") == 0) skip = true;
+
                     for (int i = 0; i < picked_up_count; i++) {
                         if (strcmp(picked_up_registry[i], object->name.ptr) == 0) {
                             skip = true;

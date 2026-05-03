@@ -2,6 +2,13 @@
  * @file data.h
  * @brief Interfaces for game persistence and world-state serialization.
  * 
+ * Update History:
+ * - 2026-05-02: Added `DeleteSaveData` function prototype. (Goal: Expose save file deletion
+ *                for post-credits cleanup to ensure a fresh "New Game" state on next launch.)
+ * 
+ * Revision Details:
+ * - Added `void DeleteSaveData(void)` prototype for removing `data.dat` after credits.
+ * 
  * Authors: Andrew Zhuo
  */
 
@@ -99,5 +106,10 @@ void ResetGameData(struct GameContext* context, Vector2 default_spawn);
  * @param game_settings Pointer to settings.
  */
 void HandleGameData(struct GameContext* context, Map* game_map, Settings* game_settings);
+
+/**
+ * @brief Deletes the save file from disk.
+ */
+void DeleteSaveData(void);
 
 #endif

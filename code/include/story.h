@@ -22,6 +22,16 @@
  * - 2026-04-10: Expanded `StoryPhase` phone data capacity from 8 to 32 messages. (Goal: Support the
  *                deeply nested branching conversation tree format introduced in Day 2 SET4-PHASE3,
  *                where indentation-driven message hierarchies create many message nodes in a flat array.)
+ * - 2026-05-02: Added ending sequence and scrolling credits system. (Goal: Support multi-ending
+ *                narrative conclusions with typed dialogue scenes, followed by a scrolling credits
+ *                sequence loaded from `credit.txt` with a dedicated credit music track and full
+ *                lifecycle management including save deletion and MAINMENU re-entry.)
+ * - 2026-05-02: Extended `CONDITION_ENTER_LOCATION` to support dual-location conditions. (Goal: Allow
+ *                a phase to be completed by entering one of two possible locations, enabling branching
+ *                story paths in Day 4 where the player can choose between the Forest or Farm ending.)
+ * - 2026-05-02: Added conditional quest loading via inline `| CONDITION` syntax. (Goal: Dynamically
+ *                show or hide quests based on the player's met-NPC history, so that Day 4 SET1-PHASE1
+ *                only shows the Saul quest if the player has met Saul on both Day 1 and a subsequent day.)
  * 
  * Revision Details:
  * - Added `StoryConditionType` enum entries for `CONDITION_DREAM_COMPLETE` and `CONDITION_AUTO_COMPLETE`.
@@ -37,6 +47,14 @@
  *    trees parsed from deeply nested `narration.txt` files.
  * - Expanded `StorySystem.phone_active_messages` from 8 to 32 entries to match the increased
  *    phase capacity during runtime phone playback.
+ * - Added `ending_file[128]` and `has_ending` fields to `StoryPhase` for ending sequence support.
+ * - Added ending sequence state to `StorySystem`: `ending_active`, `ending_show_credits`,
+ *    `ending_lines[80][256]`, `ending_line_count`, `ending_current_line`, `ending_typing_timer`,
+ *    `ending_typing_index`.
+ * - Added scrolling credits state to `StorySystem`: `ending_credits_lines[128][128]`,
+ *    `ending_credits_line_count`, `ending_credits_y`.
+ * - Added `target_value2` to `StoryCondition` for dual-location `ENTER_LOCATION` conditions.
+ * - Added `HandleEndingInput` and `TriggerEnding` function prototypes.
  * 
  * Authors: Andrew Zhuo
  */
@@ -88,6 +106,7 @@ typedef struct StoryCondition {
     StoryConditionType type;         // Type of condition
     char target_id[64];              // e.g., "fridge" or "farmer"
     float target_value;              // e.g., timer duration or expected choice index
+    float target_value2;             // Optional secondary value (e.g. for OR locations)
     bool met;                        // Whether this specific condition is satisfied
     int current_count;               // Tracker for COLLECTION conditions
 } StoryCondition;
@@ -143,6 +162,9 @@ typedef struct StoryPhase {
     char phone_sender[64];                   // Phone sender for this phase
     PhoneMessage phone_messages[32];         // Phone messages for this phase
     int phone_message_count;                 // Number of phone messages
+    // Ending data
+    char ending_file[128];                   // Ending script filename (e.g. "mike_ending1.txt")
+    bool has_ending;                         // Whether this phase triggers a game ending
 } StoryPhase;
 
 /**
@@ -189,6 +211,30 @@ typedef struct StorySystem {
     float scene_timer;                      // Timer for SCENE overlays
     char current_scene[32];                 // Text for the current scene (e.g., "FLASHBACK")
     bool phone_pending;                     // Flag to start interactive phone sequence
+
+    // Opening sequence state
+    bool opening_active;                    // Is an opening sequence playing?
+    char opening_lines[20][256];            // Opening text lines
+    int opening_line_count;                 // Total opening lines
+    int opening_current_line;               // Currently displayed line index
+    float opening_typing_timer;             // Typing effect timer
+    int opening_typing_index;               // Typing effect character index
+
+    // Ending sequence state
+    bool ending_active;                     // Is an ending sequence playing?
+    bool ending_show_credits;               // Show credits screen after ending
+    char ending_lines[80][256];             // Ending text lines (speaker: text)
+    int ending_line_count;                  // Total ending lines
+    int ending_current_line;                // Currently displayed line index
+    float ending_typing_timer;              // Typing effect timer
+    int ending_typing_index;                // Typing effect character index
+    char ending_credits_lines[128][128];    // Parsed credit text lines
+    int ending_credits_line_count;          // Total credit lines
+    float ending_credits_y;                 // Current Y position for scrolling
+    bool ending_photo_active;               // Is an ending photo currently showing?
+    float ending_photo_timer;               // Timer for how long to show the photo
+    Texture2D ending_photo;                 // Texture for the ending photo
+    char current_ending_name[64];           // Filename of the current ending (to derive photo path)
 } StorySystem;
 
 /**
@@ -197,7 +243,7 @@ typedef struct StorySystem {
  * @param story Pointer to the StorySystem to populate.
  * @param path Path to the Day text file.
  */
-void LoadStoryDay(StorySystem* story, const char* path);
+void LoadStoryDay(StorySystem* story, const char* path, struct GameContext* game_context);
 
 /**
  * @brief Checks phase progression every frame.
@@ -223,6 +269,14 @@ void AdvanceStory(struct GameContext* game_context);
 StoryPhase* GetActivePhase(StorySystem* story);
 
 /**
+ * @brief Triggers an ending sequence from a file.
+ *
+ * @param story Pointer to the StorySystem.
+ * @param ending_file Name of the ending file to load.
+ */
+void TriggerEnding(StorySystem* story, const char* ending_file);
+
+/**
  * @brief Handles player input during NARRATION_CUTSCENE state.
  *
  * @param game_context Pointer to the GameContext.
@@ -238,5 +292,31 @@ void HandleNarrationInput(struct GameContext* game_context, int* game_state, str
  * @param game_context Pointer to the GameContext.
  */
 void LoadPhaseNarration(StoryPhase* phase, struct GameContext* game_context);
+
+/**
+ * @brief Handles player input during ENDING_CUTSCENE state.
+ *
+ * @param game_context Pointer to the GameContext.
+ * @param game_state Pointer to the current game state.
+ * @param game_audio Pointer to the audio system for sound effects.
+ */
+void HandleEndingInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio);
+
+/**
+ * @brief Triggers an opening sequence from a file.
+ *
+ * @param story Pointer to the StorySystem.
+ * @param opening_file Name of the opening file to load.
+ */
+void TriggerOpening(StorySystem* story, const char* opening_file);
+
+/**
+ * @brief Handles player input during OPENING_CUTSCENE state.
+ *
+ * @param game_context Pointer to the GameContext.
+ * @param game_state Pointer to the current game state.
+ * @param game_audio Pointer to the audio system for sound effects.
+ */
+void HandleOpeningInput(struct GameContext* game_context, int* game_state, struct Audio* game_audio);
 
 #endif

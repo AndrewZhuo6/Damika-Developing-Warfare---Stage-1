@@ -12,6 +12,19 @@
  *                box and allowing non-critical interactions to occur even if movement quests are pending.)
  * - 2026-04-05: Implemented "Met NPC" and "Pickup Registry" persistence. (Goal: Ensure that session 
  *                progress is correctly recorded in the GameContext for cross-day consistency.)
+ * - 2026-05-02: Fixed Day 3/4 quest completion bug caused by interaction tutorial logic. (Goal:
+ *                Prevent false quest completion on later days by adding a `day1` guard to the
+ *                interactable tutorial check.)
+ * - 2026-05-02: Fixed `RegisterMeetNPC` to allow per-day meeting records. (Goal: Enable meeting
+ *                the same NPC across different days by including the day number in the
+ *                deduplication check.)
+ * - 2026-05-02: Implemented dialogue-triggered endings via `[TRIGGER_ENDING]` tag. (Goal: Allow
+ *                dialogue nodes to transition the game into `ENDING_CUTSCENE` by specifying an
+ *                ending script file.)
+ * - 2026-05-02: Added `forest_road` door guard based on active quest. (Goal: Prevent sequence-breaking
+ *                by gating forest access behind the "Go to the forest and find Saul" quest.)
+ * - 2026-05-03: Added support for `[PHOTO]` tag triggers in `ApplyNodeSideEffects`. 
+ *                (Goal: Link narrative events to temporary visual photo overlays.)
  * 
  * Revision Details:
  * - Refactored `CheckInteractable` to use a dynamic `playerHitbox` with a 40px radius around the player sprite.
@@ -19,9 +32,17 @@
  *    (like the Fridge) when earlier quests were incomplete.
  * - Fixed a string-comparison bug in `IsOtherQuestsPending` for "Explore" objectives.
  * - Added comprehensive Doxygen-style function headers for all internal static helpers.
+ * - Added `strcmp(game_context->story.day_folder, "day1") == 0` guard to the `SET1-PHASE1` tutorial
+ *    quest completion check in `UpdateStoryConditions`.
+ * - Updated `RegisterMeetNPC` to compare both NPC ID and day number, allowing for multi-day meeting tracking.
+ * - Added `trigger_ending_file` check in `InteractWithNPC` to construct the ending path and call `TriggerEnding`.
+ * - Added `forest_road` door guard in `InteractWithDoor` that validates the required forest quest is active.
+ * - Updated `ApplyNodeSideEffects` to detect `photo_trigger` filenames and load them into 
+ *    `game_context->photo_overlay` with a 5-second auto-hide timer.
  * 
  * Authors: Andrew Zhuo and Cornelius Jabez Lim
  */
+ 
 #include "interaction.h"
 #include <string.h>
 #include <stdio.h>
@@ -55,14 +76,15 @@ static void RegisterPickup(struct GameContext* game_context, const char* id){
  * @param id NPC ID to register.
  */
 static void RegisterMeetNPC(struct GameContext* game_context, const char* id){
+    // Extract day number from day_folder (e.g., "day2" -> 2)
+    int day_num = 1;
+    if (sscanf(game_context->story.day_folder, "day%d", &day_num) != 1) day_num = 1;
+
     for (int i = 0; i < game_context->met_npc_count; i++) {
-        if (strcmp(game_context->met_npcs[i], id) == 0) return;
+        if (strcmp(game_context->met_npcs[i], id) == 0 && game_context->met_npc_day[i] == day_num) return;
     }
     if (game_context->met_npc_count < 64) {
         strncpy(game_context->met_npcs[game_context->met_npc_count], id, 63);
-        // Extract day number from day_folder (e.g., "day2" -> 2)
-        int day_num = 1;
-        if (sscanf(game_context->story.day_folder, "day%d", &day_num) != 1) day_num = 1;
         game_context->met_npc_day[game_context->met_npc_count] = day_num;
         game_context->met_npc_set[game_context->met_npc_count] = game_context->story.current_set_idx;
         game_context->met_npc_phase[game_context->met_npc_count] = game_context->story.current_phase_idx;
@@ -120,7 +142,7 @@ static void UpdateStoryConditions(struct GameContext* game_context, Dialogue* ga
     StoryPhase* active = GetActivePhase(&game_context->story);
     if (!active) return;
 
-    if (strcmp(active->name, "SET1-PHASE1") == 0){
+    if (strcmp(active->name, "SET1-PHASE1") == 0 && strcmp(game_context->story.day_folder, "day1") == 0){
         if (interactable_id && strlen(interactable_id) > 0){
             if (active->quest_count > 1) active->quests[1].completed = true;
         }
@@ -262,6 +284,14 @@ static void ApplyNodeSideEffects(DialogueNode* node, struct GameContext* context
                 break;
             }
         }
+    }
+    if (node->photo_trigger[0] != '\0') {
+        char photo_path[128];
+        snprintf(photo_path, sizeof(photo_path), "../assets/map/map_apart/%s", node->photo_trigger);
+        if (context->photo_overlay.id != 0) UnloadTexture(context->photo_overlay);
+        context->photo_overlay = LoadTexture(photo_path);
+        context->photo_overlay_active = true;
+        context->photo_overlay_timer = 5.0f;
     }
 }
 
@@ -416,7 +446,21 @@ void InteractWithNPC(NPC *npc, Dialogue* game_dialogue, GameState* game_state, s
                         } else{
                             if (current_node->triggers_phone) game_context->story.narration_pending = true;
                             UpdateStoryConditions(game_context, game_dialogue, current_interactable_id);
-                            *game_state = GAMEPLAY;
+                            
+                            if (current_node->trigger_ending_file[0] != '\0') {
+                                char ending_path[128];
+                                // We know it's day4, but let's build the path. Wait, endings could be in the day root or set/phase root.
+                                // In farmer.txt, it triggers "farmer_ending1.txt". The file is in assets/text/day4/set3/phase1/
+                                sprintf(ending_path, "../assets/text/%s/set%d/phase%d/%s", 
+                                    game_context->story.day_folder, 
+                                    game_context->story.current_set_idx + 1, 
+                                    game_context->story.current_phase_idx + 1, 
+                                    current_node->trigger_ending_file);
+                                TriggerEnding(&game_context->story, ending_path);
+                                *game_state = ENDING_CUTSCENE;
+                            } else {
+                                *game_state = GAMEPLAY;
+                            }
                         }
                     } else{ 
                         game_dialogue->current_line = game_dialogue->line_count - 1; 
@@ -486,6 +530,19 @@ void InteractWithDoor(Door *door, Map *map, Character *player, Dialogue *game_di
     StoryPhase* active = GetActivePhase(&game_context->story);
     if (IsOtherQuestsPending(active, door->base.interactable_id)) return;
 
+    if (strcmp(door->base.interactable_id, "forest_road") == 0) {
+        bool has_saul_quest = false;
+        if (active) {
+            for (int i = 0; i < active->quest_count; i++) {
+                if (strstr(active->quests[i].description, "Go to the forest and find Saul")) {
+                    has_saul_quest = true;
+                    break;
+                }
+            }
+        }
+        if (!has_saul_quest) return;
+    }
+
     // Determine target location string based on the door's targetLocation enum
     const char* target_loc = "INTERIOR"; // Default
     switch (door->targetLocation) {
@@ -536,6 +593,10 @@ void CheckInteractable(NPC worldNPCs[], Item worldItems[], Door worldDoors[], in
     };
     // Check for NPCs
     for (int i = 0; i < npcCount; i++){
+        if (strcmp(worldNPCs[i].base.interactable_id, "mike") == 0) {
+            worldNPCs[i].base.isActive = false;
+            continue;
+        }
         if (CheckCollisionRecs(playerHitbox, worldNPCs[i].base.bounds)){
             worldNPCs[i].base.isActive = true;
             float dist = Vector2Distance(playerPos, (Vector2){worldNPCs[i].base.bounds.x, worldNPCs[i].base.bounds.y});
@@ -584,39 +645,23 @@ void UpdateDay3Mowing(struct GameContext* game_context) {
     }
     if (!has_lawnmower) return;
     
-    // Find lawnmower item to get texture size
-    float mower_w = 64.0f;
-    float mower_h = 64.0f;
-    for (int i = 0; i < game_context->itemCount; i++) {
-        if (strcmp(game_context->worldItems[i].base.interactable_id, "lawnmower") == 0) {
-            if (game_context->worldItems[i].base.texture.id != 0) {
-                mower_w = (float)game_context->worldItems[i].base.texture.width;
-                mower_h = (float)game_context->worldItems[i].base.texture.height;
-            }
-            break;
-        }
-    }
+    // Get mower dimensions from the animated texture (2 frames)
+    Character* player = game_context->player;
+    float mower_w = (float)player->lawnmower_item.width / 2.0f;
+    float mower_h = (float)player->lawnmower_item.height;
 
     // Compute lawnmower rect relative to player direction
+    // Fallback to horizontal positioning if moving vertically
+    int effective_dir = player->direction;
+    if (effective_dir == 0 || effective_dir == 3) effective_dir = player->last_horiz_dir;
+    
     Rectangle lawnmower_rect = {0, 0, mower_w, mower_h};
-    Character* player = game_context->player;
-    switch (player->direction) {
-        case 0: // down
-            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
-            lawnmower_rect.y = player->position.y + player->size.y; 
-            break; 
-        case 1: // left
-            lawnmower_rect.x = player->position.x - mower_w; 
-            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
-            break; 
-        case 2: // right
-            lawnmower_rect.x = player->position.x + player->size.x; 
-            lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
-            break; 
-        case 3: // up
-            lawnmower_rect.x = player->position.x + player->size.x / 2.0f - mower_w / 2.0f; 
-            lawnmower_rect.y = player->position.y - mower_h; 
-            break; 
+    if (effective_dir == 1) { // left
+        lawnmower_rect.x = player->position.x - mower_w; 
+        lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
+    } else { // right (effective_dir == 2)
+        lawnmower_rect.x = player->position.x + player->size.x; 
+        lawnmower_rect.y = player->position.y + player->size.y - mower_h; 
     }
     
     // Check collision with un-mowed brown grass
